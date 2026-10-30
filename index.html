@@ -1,0 +1,1497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Megatron Tube Amp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Bodoni:wght@500;700&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --panel:linear-gradient(180deg,#d9dbdc,#b4b7b9 60%,#a3a6a8);
+  --ink:#161718; --well:#8d9092; --glow:#ff9a4a; --plate:#5a2a1a;
+  --meter:linear-gradient(0deg,#3c8c4e,#9fd37a); --cap:#c9ccce;
+  --sel-bg:#f4f5f5; --sel-ink:#161718; --off-ink:#161718;
+  --field:#eceeef; --field-ink:#161718;
+  --ok:#14853a; --amber:#d9691a;
+}
+[data-skin="midnight"]{
+  --panel:linear-gradient(180deg,#30343a,#1f2226 60%,#191b1e);
+  --ink:#ffffff; --well:#0f1113; --glow:#39ff6e; --plate:#0c3a1a;
+  --meter:linear-gradient(0deg,#12a83f,#8dffad); --cap:#3a3f46;
+  --sel-bg:#ebe8e2; --sel-ink:#15171a; --off-ink:#ffffff;
+  --field:#15171a; --field-ink:#ffffff;
+  --ok:#39ff6e; --amber:#f2a42c;
+}
+[data-skin="brass"]{
+  --panel:linear-gradient(180deg,#d8b67a,#b28a4e 60%,#9a7440);
+  --ink:#24170a; --well:#7a5a2e; --glow:#ffc35c; --plate:#4a2a10;
+  --meter:linear-gradient(0deg,#a8561c,#ffd27a); --cap:#e2c48c;
+  --sel-bg:#fbf1dc; --sel-ink:#24170a; --off-ink:#fbf1dc;
+  --field:#f3e3c2; --field-ink:#24170a;
+  --ok:#1b7a34; --amber:#b5540f;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;min-height:100%}
+/* plugin UI: no text selection (and never the blue highlight) */
+.amp,.amp *{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+::selection{background:#1d6b33;color:#fff}
+body{display:flex;justify-content:center;padding:24px 16px;font-family:'IBM Plex Sans Condensed',system-ui,sans-serif}
+button,select{font:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid #39ff6e;outline-offset:2px}
+.io select{accent-color:#39ff6e}
+.io select:focus,.io select:focus-visible{outline:none;border-color:rgba(0,0,0,.35)}   /* no highlight ring on the device boxes */
+.io select option:checked{background:#1d6b33;color:#fff}
+/* our own dropdown list (Chrome / Edge 135+): green highlight only, never the system blue */
+@supports (appearance:base-select){
+  .io select,.io select::picker(select){appearance:base-select}
+  .io select{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .io select::picker-icon{color:var(--field-ink);opacity:.8;transition:rotate .15s}
+  .io select:open::picker-icon{rotate:180deg}
+  .io select::picker(select){margin-top:4px;padding:4px;border:1px solid #2c312e;border-radius:6px;background:#121413;color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.65)}
+  .io select option{padding:6px 10px;border-radius:4px;font-size:13px;white-space:nowrap;background:transparent;color:#fff;outline:none}
+  .io select option::checkmark{display:none}
+  .io select option:hover,.io select option:focus,.io select option:focus-visible{background:#1d6b33;color:#fff;outline:none}
+  .io select option:checked{background:#2a8a45;color:#fff}
+}
+.dial:focus,.dial:focus-visible{outline:none}
+.tube:focus{outline:none}
+.tube:focus-visible,.tube.drag{outline:2px solid #fff;outline-offset:3px}
+
+.amp{position:relative;flex:0 0 auto;width:900px;max-width:none;border-radius:12px;padding:18px;background:var(--panel);color:var(--ink);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -2px 6px rgba(0,0,0,.35),0 20px 50px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;gap:18px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:0 6px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-family:'Libre Bodoni',serif;font-size:24px;letter-spacing:.06em}
+.brand span{font-size:12px;letter-spacing:.18em;opacity:.85}
+.lbl{font-size:12px;font-weight:600;letter-spacing:.18em}
+.seg{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--well);box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+.seg button{border:0;border-radius:6px;padding:0 14px;height:32px;min-width:78px;font-size:13px;font-weight:600;letter-spacing:.06em;background:transparent;color:var(--off-ink)}
+.seg button[aria-pressed="true"]{background:var(--sel-bg);color:var(--sel-ink);box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.row{display:flex;align-items:center;gap:10px}
+
+.io{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.12);box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+.io label{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:600;letter-spacing:.14em}
+.io select{height:30px;border-radius:6px;border:1px solid rgba(0,0,0,.35);background:var(--field);color:var(--field-ink);padding:0 8px;font-size:13px;letter-spacing:0;min-width:0}
+.actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;padding:0 6px}
+.btn{height:40px;padding:0 18px;border-radius:8px;border:1px solid rgba(0,0,0,.4);font-weight:600;letter-spacing:.1em;font-size:13px;
+  background:linear-gradient(180deg,#f6f6f6,#c9cbcd);color:#161718;box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.btn.on{background:linear-gradient(180deg,#4b4f54,#2a2d31);color:#fff}
+.btn.power[aria-pressed="true"]{background:linear-gradient(180deg,#ffb27a,#e5702b);color:#2a1103}
+.switches{position:relative;height:88px;width:100%}
+#switches{height:auto}
+#switches > .io{position:relative}
+.switches > .sw,.switches > .knob{position:absolute;top:0;left:0;transform:translateX(-50%)}
+.switches > .knob.mini .dial{margin-top:0}
+.bolts{position:absolute;inset:0;pointer-events:none}
+.bolt{position:absolute;left:0;top:0;width:30px;height:56px;transform:translate(-50%,-50%)}
+.bolt svg{width:100%;height:100%;display:block}
+/* LED tuner: black well at the bottom of the amp, same width as the curve area */
+.tuner{container:tuner/inline-size;align-self:center;margin-top:10px;max-width:100%;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:0;padding:5px 12px;border-radius:7px;box-sizing:border-box;min-width:0;background:linear-gradient(180deg,#080a0a,#0d1011);box-shadow:inset 0 2px 8px rgba(0,0,0,.95),inset 0 0 0 1px rgba(255,255,255,.04),0 1px 0 rgba(255,255,255,.25)}
+.tn-leds{display:flex;align-items:center;gap:2px;width:100%}
+.tuner .tri{flex:1 1 0;min-width:0;height:14px;display:block;transition:filter .1s}
+.tuner .tri b{display:block;width:100%;height:100%;background:var(--d);transition:background .1s}
+.tuner .tri.l b{clip-path:polygon(0 0,100% 50%,0 100%)}
+.tuner .tri.r b{clip-path:polygon(100% 0,0 50%,100% 100%)}
+.tuner .tri.on{filter:drop-shadow(0 0 5px var(--l))}
+.tuner .tri.on b{background:var(--l)}
+.tuner .win{flex:5 1 0;min-width:0;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;overflow:hidden;white-space:nowrap;font-weight:700;font-size:clamp(11px,2.2cqi,15px);letter-spacing:.02em;line-height:1;color:#5d6862;background:#12301a;transition:background .1s,box-shadow .1s,color .1s}
+.tuner .win.live{color:#e8ece9}
+.tuner .win sub{font-size:.75em;font-weight:600;vertical-align:baseline;position:relative;top:.15em;margin-left:1px}
+.tuner .win.on{background:#39ff6e;color:#04210d;box-shadow:0 0 12px rgba(57,255,110,.8)}
+@media (prefers-reduced-motion:reduce){.tuner .tri,.tuner .tri b,.tuner .win{transition:none}}
+.screen{position:relative}
+.dbedit{position:absolute;left:0;top:0;width:66px;height:22px;transform:translate(-50%,-50%);box-sizing:border-box;padding:0 6px;border-radius:4px;border:1px solid #39ff6e;background:#0b0d0c;color:#fff;font:600 12px 'IBM Plex Sans Condensed',sans-serif;text-align:center;font-variant-numeric:tabular-nums;outline:none;box-shadow:0 0 8px rgba(57,255,110,.35);display:none;z-index:5}
+.dbedit.open{display:block}
+.dbedit::selection{background:#1d6b33;color:#fff}
+.grip{position:absolute;right:4px;bottom:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:nwse-resize;touch-action:none;color:rgba(255,255,255,.45);border-radius:4px}
+.grip:hover,.grip.drag{color:#fff}
+.grip svg{width:14px;height:14px}
+.grip .gp{position:absolute;right:26px;bottom:2px;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,.7);padding:2px 6px;border-radius:4px;opacity:0;transition:opacity .15s;pointer-events:none;white-space:nowrap}
+.grip.drag .gp,.grip:focus-visible .gp{opacity:1}
+.led{display:inline-block;vertical-align:-1px;width:10px;height:10px;margin-left:7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#24542f,#06200d 70%);
+  box-shadow:0 0 0 2px #9da2a6,0 0 0 3px rgba(0,0,0,.6),inset 0 1px 2px rgba(0,0,0,.7);transition:background .15s,box-shadow .15s}
+.led.on{background:radial-gradient(circle at 35% 30%,#f0fff3 0%,#7dff9f 30%,#22e05a 60%,#0a6b25 100%);
+  box-shadow:0 0 0 2px #c9cdd0,0 0 0 3px rgba(0,0,0,.6),0 0 10px 3px rgba(57,255,110,.6)}
+.sw{display:flex;flex-direction:column;align-items:center;gap:2px}
+.swn{font-size:11px;font-weight:600;letter-spacing:.16em}
+.toggle{display:flex;align-items:center;gap:3px;border:0;background:transparent;padding:2px 2px;color:inherit;border-radius:8px}
+.toggle svg{width:40px;height:60px;display:block;filter:drop-shadow(0 3px 3px rgba(0,0,0,.45))}
+.toggle .lever{transform-box:view-box;transform-origin:30px 46px;transition:transform .12s cubic-bezier(.5,1.6,.6,1)}
+.toggle[aria-checked="false"] .lever{transform:scaleY(-1)}
+.status:empty{display:none}
+.status{font-size:12px;width:100%;text-align:center;padding:4px 30px 0;box-sizing:border-box}
+.status.err{font-weight:600}
+.warn{font-size:12px;opacity:.9}
+
+.display{display:flex;align-items:stretch;gap:18px;height:136px}
+.meterbox{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;width:12px}
+/* compressor threshold line on each meter */
+.thr{position:absolute;left:50%;top:0;width:12px;height:14px;transform:translate(-50%,-50%);cursor:ns-resize;touch-action:none;z-index:3;outline:none}
+.thr::before{content:"";position:absolute;left:2px;right:2px;top:50%;height:2px;margin-top:-1px;background:#fff}
+.thr .tv{position:absolute;top:50%;transform:translateY(-50%);font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.8);padding:1px 5px;border-radius:3px;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none}
+.thr.left .tv{left:calc(100% + 4px)}
+.thr.right .tv{right:calc(100% + 4px)}
+.thr.show .tv,.thr:focus-visible .tv{opacity:1}
+.meter{flex:1;width:12px;border-radius:6px;background:#1b1d1c;box-shadow:inset 0 1px 3px rgba(0,0,0,.8);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.meter i{display:block;height:0;background:var(--meter)}
+.meter i.clip{background:#e5484d}
+.meterbox span{font-size:11px;font-weight:600}
+.screen{flex:1;display:flex;flex-direction:column;border-radius:6px;padding:8px;background:#0d0f0e;box-shadow:inset 0 2px 8px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.25);min-width:0}
+.screen canvas{width:100%;flex:1;min-height:0;display:block;touch-action:none;cursor:ns-resize;border-radius:4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.tubes{position:relative;height:146px;border-radius:6px;overflow:hidden;color:#c9ced3;background:linear-gradient(180deg,#050607 0%,#0b0d0f 55%,#14171a 82%,#1d2125 100%);box-shadow:inset 0 12px 18px rgba(0,0,0,.9),inset 0 -1px 0 rgba(255,255,255,.07),inset 10px 0 14px rgba(0,0,0,.6),inset -10px 0 14px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.1)}
+.tubes::after{content:"";position:absolute;left:0;right:0;bottom:0;height:12px;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.04));pointer-events:none}
+.xfmrs{position:absolute;inset:0;z-index:0;pointer-events:none}
+/* shadow over the transformers: they recede into the chassis as background detail */
+.xfmrs::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.25) 45%,rgba(0,0,0,.35) 100%),
+             radial-gradient(ellipse 55% 90% at 50% 100%,rgba(0,0,0,0),rgba(0,0,0,.35))}
+.xfmr{position:absolute;bottom:0;left:0;transform:translateX(-50%);filter:blur(.7px) brightness(.62) contrast(.85)} /* depth of field: transformers sit further back */
+.xfmr svg{display:block;width:100%;height:100%}
+.xfmr.big{width:96px;height:108px}
+.xfmr.small{width:72px;height:81px}
+.tube{position:absolute;bottom:0;left:0;width:38px;isolation:isolate;z-index:1;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;touch-action:none;cursor:ns-resize;border-radius:999px 999px 4px 4px}
+.tube.off .glass{opacity:.55}
+@keyframes tubeNope{0%,100%{transform:translateX(-50%)}20%{transform:translateX(calc(-50% - 4px))}40%{transform:translateX(calc(-50% + 4px))}60%{transform:translateX(calc(-50% - 3px))}80%{transform:translateX(calc(-50% + 2px))}}
+.tube.nope{animation:tubeNope .35s ease}
+.glass .guts{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.glass .guts .fil{stroke:#4a4f4c}
+.tube:not(.off) .glass .guts .fil{stroke:#9dffb8;filter:drop-shadow(0 0 1.5px #39ff6e)}
+/* switched-on tubes: steady green outer glow, a bit stronger with signal */
+.tube:not(.off) .glass{
+  --g:calc(var(--drive,.5) * var(--drive,.5));
+  filter:drop-shadow(0 0 calc(2px + var(--g) * 12px + var(--heat,0) * 6px) rgba(57,255,110,calc(.35 + var(--drive,.5) * .55)))
+         drop-shadow(0 0 calc(6px + var(--g) * 34px + var(--heat,0) * 14px) rgba(57,255,110,calc(.1 + var(--drive,.5) * .4)));
+  transition:filter .2s}
+.tube:not(.off) .plate{box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 0 calc(var(--heat,0) * 16px + var(--drive,.5) * 14px) #39ff6e}
+.tube:not(.off) .plate::after{opacity:max(var(--heat,0), calc(var(--drive,.5) * .75))}
+.tube:not(.off) .glass .guts .fil{filter:drop-shadow(0 0 calc(1px + var(--drive,.5) * 4px) #39ff6e)}
+.tube:not(.off)::before{opacity:max(var(--heat,0), calc(var(--drive,.5) * .8))}
+.tube.off .tl{opacity:.5}
+.tube .tl{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;letter-spacing:.14em;white-space:nowrap}
+.tube .drv{position:absolute;top:40px;left:50%;transform:translate(-50%,-50%);z-index:3;font-size:10px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:#fff;background:rgba(0,0,0,.72);padding:1px 5px;border-radius:3px;opacity:0;transition:opacity .15s;pointer-events:none}
+.tube:hover .drv,.tube:focus-visible .drv,.tube.drag .drv{opacity:1}
+.glass{width:100%;height:80px;border-radius:999px 999px 5px 5px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:
+    radial-gradient(ellipse 60% 18% at 50% 4%, rgba(10,12,14,.95), rgba(40,44,48,.6) 60%, transparent 100%),
+    linear-gradient(90deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.05) 22%,rgba(255,255,255,.015) 45%,rgba(0,0,0,.18) 72%,rgba(0,0,0,.32) 88%,rgba(255,255,255,.12) 100%);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),inset 0 0 calc(var(--heat,0)*26px) color-mix(in srgb,var(--glow) 55%,transparent),0 0 calc(var(--heat,0)*22px) color-mix(in srgb,var(--glow) 40%,transparent)}
+.glass::after{content:"";position:absolute;top:14%;left:16%;width:13%;height:58%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.12) 70%,rgba(255,255,255,0));filter:blur(.3px)}
+.glass::before{content:"";position:absolute;left:8%;right:8%;bottom:0;height:22%;background:linear-gradient(0deg,rgba(0,0,0,.5),rgba(0,0,0,0));z-index:1}
+.plate{position:relative;width:46%;height:46%;margin-top:6%;border-radius:2px;transition:none;
+  background:linear-gradient(90deg,#1c1e20,#3d4144 30%,#55595d 50%,#3a3e41 70%,#1a1c1e);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.6),0 0 calc(var(--heat,0)*16px) var(--glow)}
+.plate::before{content:"";position:absolute;inset:-12% -10%;border-top:1px solid rgba(150,155,160,.5);border-bottom:1px solid rgba(150,155,160,.5)}
+.plate::after{content:"";position:absolute;inset:0;border-radius:2px;background:radial-gradient(ellipse at 50% 55%,var(--glow) 0%,color-mix(in srgb,var(--glow) 40%,transparent) 45%,transparent 75%);opacity:var(--heat,0);mix-blend-mode:screen}
+.base{position:relative;width:124%;height:16px;border-radius:3px 3px 1px 1px;background:linear-gradient(180deg,#2a2c2f 0%,#121315 35%,#0a0b0c 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.6)}
+.base::after{content:"";position:absolute;left:12%;right:12%;top:3px;height:2px;border-radius:2px;background:rgba(255,255,255,.08)}
+.tube::before{content:"";position:absolute;left:50%;bottom:30%;width:300%;height:120%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--glow) 35%,transparent),transparent);opacity:var(--heat,0);pointer-events:none;z-index:-1}
+.tube::after{content:"";position:absolute;left:50%;bottom:-3px;width:170%;height:8px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.75),transparent);pointer-events:none;z-index:-1}
+
+.knobs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:0 10px}
+.tank{position:relative;height:46px;margin:0;border-radius:6px;background:linear-gradient(180deg,#0b0c0c,#151716 50%,#0b0c0c);box-shadow:inset 0 2px 8px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.25)}
+.tank canvas{width:100%;height:100%;display:block}
+.tank span{position:absolute;right:10px;top:6px;font-size:10px;font-weight:600;letter-spacing:.18em;color:#8b938d}
+.knob{display:flex;flex-direction:column;align-items:center;gap:2px}
+.wordmark{display:flex;justify-content:space-between;align-items:baseline;margin-top:-4px;margin-bottom:0;padding:0 0 3px;border-bottom:2px solid #fff;font-family:'Libre Bodoni',serif;font-weight:700;font-size:26px;line-height:1;text-shadow:0 -1px 0 rgba(0,0,0,.35)}
+.wordmark span{display:block}
+.knob .n{font-size:12px;letter-spacing:.18em;font-weight:600;margin-top:2px}
+.dial{width:104px;max-width:100%;aspect-ratio:1;touch-action:none;cursor:ns-resize;border-radius:50%}
+.knob.mini{gap:0}
+.knob.mini .n{font-size:11px;letter-spacing:.16em;margin-top:0}
+.knob.mini .dial{width:62px}
+.knob.mini .dial svg text{font-size:11px}
+.knob.mini .val{font-size:11px}
+.knob.small .dial{width:59px;margin:auto 0}
+.knob.small .dial svg text{display:none}
+.dial svg{width:100%;height:100%;display:block}
+.knob{position:relative}
+/* labels (and diodes) sit under their controls */
+.knob .dial{order:1}
+.knob .n{order:2}
+.sw{flex-direction:column-reverse}
+.sw .swn{margin-top:4px}
+#switches > .sw:first-child .swn{display:flex;flex-direction:column-reverse;align-items:center;gap:4px}
+#switches > .sw:first-child .led{margin-left:0}
+.io .pwr{flex:0 0 auto;padding:0 4px 0 2px}
+.io .pwr .swn{display:none}
+#led{display:none} /* the rocker lights itself */
+.rocker{width:30px;height:46px;display:block}
+.rocker .rk-on,.rocker .rk-glow{opacity:0;transition:opacity .12s}
+#power[aria-checked="true"] .rocker .rk-on{opacity:1}
+#power[aria-checked="true"] .rocker .rk-glow{opacity:.75}
+#power[aria-checked="true"] .rocker .rk-off{opacity:0}
+#pwrLbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap} /* hidden text, still read out as the switch name */
+.val{position:absolute;left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;padding:1px 6px;border-radius:4px;background:transparent;color:#fff;opacity:0;transition:opacity .15s;pointer-events:none;z-index:2}
+.knob.turning .val{opacity:1}
+.dotEdit{position:absolute;transform:translate(-50%,-50%);box-sizing:content-box;width:4ch;min-width:1ch;padding:3px 6px;border-radius:5px;border:2.5px solid #39ff6e;background:#0b0c0c;color:#fff;
+  font:600 12px 'IBM Plex Sans Condensed',sans-serif;text-align:center;font-variant-numeric:tabular-nums;outline:none;z-index:5;box-shadow:0 0 12px rgba(57,255,110,.55);
+  -webkit-user-select:text;user-select:text}
+.hint{text-align:center;font-size:12px;opacity:.85;padding-bottom:4px}
+
+@media (max-width:640px){body{padding:10px 8px}}
+</style>
+</head>
+<body>
+<main class="amp" id="amp" data-skin="midnight">
+
+  <div class="actions">
+  <div class="switches" id="switches" role="group" aria-label="Power and tube switches">
+  <section class="io" aria-label="Audio routing">
+      <div class="sw pwr">
+        <span class="swn"><span id="pwrLbl">POWER</span><span class="led" id="led" aria-hidden="true"></span></span>
+        <button type="button" class="toggle" id="power" role="switch" aria-checked="false" aria-labelledby="pwrLbl">
+        <svg class="rocker" viewBox="0 0 40 60" aria-hidden="true">
+          <defs>
+            <linearGradient id="rkOff" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b6b3c"/><stop offset=".48" stop-color="#1c4a29"/><stop offset=".52" stop-color="#103019"/><stop offset="1" stop-color="#173f23"/></linearGradient>
+            <linearGradient id="rkOn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8ffc9"/><stop offset=".45" stop-color="#3dff70"/><stop offset=".52" stop-color="#1fd552"/><stop offset="1" stop-color="#159c3b"/></linearGradient>
+            <filter id="rkGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2"/></filter>
+          </defs>
+          <rect x="2" y="2" width="36" height="56" rx="5" fill="#0b0c0d" stroke="#2a2d31" stroke-width="1"/>
+          <rect x="4.5" y="4.5" width="31" height="51" rx="3.5" fill="#000"/>
+          <g class="rk-glow"><rect x="7" y="8" width="26" height="44" rx="3" fill="#39ff6e" filter="url(#rkGlow)"/></g>
+          <g class="rk-off">
+            <rect x="7" y="7" width="26" height="46" rx="3" fill="url(#rkOff)"/>
+            <rect x="7" y="7" width="26" height="23" rx="3" fill="rgba(0,0,0,.35)"/>
+          </g>
+          <g class="rk-on">
+            <rect x="7" y="7" width="26" height="46" rx="3" fill="url(#rkOn)"/>
+            <rect x="7" y="30" width="26" height="23" rx="3" fill="rgba(0,0,0,.28)"/>
+          </g>
+          <rect x="7" y="7" width="26" height="46" rx="3" fill="none" stroke="rgba(255,255,255,.18)" stroke-width=".8"/>
+          <line x1="20" y1="13" x2="20" y2="21" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="20" cy="43" r="4" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.8"/>
+        </svg>
+        </button>
+      </div>
+    <label>INPUT DEVICE<select id="inDev"><option value="">Turn on to list devices</option></select></label>
+    <label>INPUT CHANNEL<select id="inCh">
+      <option value="0">Input 1 (left)</option>
+      <option value="1">Input 2 (right)</option>
+      <option value="sum">1 + 2 summed</option>
+    </select></label>
+    <label>OUTPUT DEVICE<select id="outDev"><option value="">System default</option></select></label>
+  </section>
+    </div>
+  </div>
+
+  <div class="display">
+    <div class="meterbox"><div class="meter" aria-hidden="true"><i id="mIn"></i></div><span>IN</span></div>
+    <div class="screen"><canvas id="curve" tabindex="0" aria-label="Gain staging curve: input, six tube stages, output. Left and right arrows pick a point, up and down change it." aria-describedby="readout"></canvas></div>
+    <div class="meterbox"><div class="meter" aria-hidden="true"><i id="mOut"></i></div><span>OUT</span></div>
+  </div>
+  <span class="sr" id="readout" aria-live="polite"></span>
+
+  <div class="tubes" id="tubes" role="group" aria-label="Tube gain stages"><div class="xfmrs" aria-hidden="true"><div class="xfmr big"><svg viewBox="0 0 100 112" aria-hidden="true"><defs><pattern id="lama" width="2.2" height="4" patternUnits="userSpaceOnUse"><rect width="2.2" height="4" fill="#1a1b1d"/><rect width=".7" height="4" fill="#2a2c2f"/></pattern><linearGradient id="lamSa" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset=".25" stop-color="#fff" stop-opacity=".07"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient><radialGradient id="bella" cx=".3" cy=".22" r=".95"><stop offset="0" stop-color="#4a4d52"/><stop offset=".18" stop-color="#1c1d20"/><stop offset=".6" stop-color="#0b0b0c"/><stop offset="1" stop-color="#020202"/></radialGradient><filter id="softa" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter><radialGradient id="nuta" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#d8dadc"/><stop offset=".5" stop-color="#8e9296"/><stop offset="1" stop-color="#4c5054"/></radialGradient></defs><ellipse cx="52" cy="108" rx="50" ry="5" fill="rgba(0,0,0,.7)"/><rect x="4" y="8" width="92" height="98" rx="2" fill="url(#lama)"/><rect x="4" y="8" width="92" height="98" rx="2" fill="url(#lamSa)"/><rect x="4" y="8" width="92" height="3" fill="rgba(255,255,255,.08)"/><rect x="16" y="20" width="68" height="88" rx="16" fill="#000"/><rect x="17" y="20" width="66" height="86" rx="15" fill="url(#bella)"/><path filter="url(#softa)" d="M24 36 Q25 25 36 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="4" stroke-linecap="round"/><rect filter="url(#softa)" x="22" y="40" width="7" height="52" rx="3.5" fill="rgba(255,255,255,.1)"/><path d="M76 30 L76 96" stroke="rgba(255,255,255,.06)" stroke-width="2"/><rect x="0" y="104" width="100" height="4" rx="1" fill="#0a0a0b" stroke="rgba(255,255,255,.06)" stroke-width=".6"/><g transform="translate(10 15)"><polygon points="4.6,0 2.3,4 -2.3,4 -4.6,0 -2.3,-4 2.3,-4" fill="url(#nuta)" stroke="#3a3d40" stroke-width=".5"/><circle r="1.7" fill="#2a2c2f"/></g><g transform="translate(90 15)"><polygon points="4.6,0 2.3,4 -2.3,4 -4.6,0 -2.3,-4 2.3,-4" fill="url(#nuta)" stroke="#3a3d40" stroke-width=".5"/><circle r="1.7" fill="#2a2c2f"/></g></svg></div><div class="xfmr small"><svg viewBox="0 0 100 112" aria-hidden="true"><defs><pattern id="lamb" width="2.2" height="4" patternUnits="userSpaceOnUse"><rect width="2.2" height="4" fill="#1a1b1d"/><rect width=".7" height="4" fill="#2a2c2f"/></pattern><linearGradient id="lamSb" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset=".25" stop-color="#fff" stop-opacity=".07"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient><radialGradient id="bellb" cx=".3" cy=".22" r=".95"><stop offset="0" stop-color="#4a4d52"/><stop offset=".18" stop-color="#1c1d20"/><stop offset=".6" stop-color="#0b0b0c"/><stop offset="1" stop-color="#020202"/></radialGradient><filter id="softb" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter><radialGradient id="nutb" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#d8dadc"/><stop offset=".5" stop-color="#8e9296"/><stop offset="1" stop-color="#4c5054"/></radialGradient></defs><ellipse cx="52" cy="108" rx="50" ry="5" fill="rgba(0,0,0,.7)"/><rect x="4" y="8" width="92" height="98" rx="2" fill="url(#lamb)"/><rect x="4" y="8" width="92" height="98" rx="2" fill="url(#lamSb)"/><rect x="4" y="8" width="92" height="3" fill="rgba(255,255,255,.08)"/><rect x="16" y="20" width="68" height="88" rx="16" fill="#000"/><rect x="17" y="20" width="66" height="86" rx="15" fill="url(#bellb)"/><path filter="url(#softb)" d="M24 36 Q25 25 36 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="4" stroke-linecap="round"/><rect filter="url(#softb)" x="22" y="40" width="7" height="52" rx="3.5" fill="rgba(255,255,255,.1)"/><path d="M76 30 L76 96" stroke="rgba(255,255,255,.06)" stroke-width="2"/><rect x="0" y="104" width="100" height="4" rx="1" fill="#0a0a0b" stroke="rgba(255,255,255,.06)" stroke-width=".6"/><g transform="translate(10 15)"><polygon points="4.6,0 2.3,4 -2.3,4 -4.6,0 -2.3,-4 2.3,-4" fill="url(#nutb)" stroke="#3a3d40" stroke-width=".5"/><circle r="1.7" fill="#2a2c2f"/></g><g transform="translate(90 15)"><polygon points="4.6,0 2.3,4 -2.3,4 -4.6,0 -2.3,-4 2.3,-4" fill="url(#nutb)" stroke="#3a3d40" stroke-width=".5"/><circle r="1.7" fill="#2a2c2f"/></g></svg></div><div class="xfmr big"><svg viewBox="0 0 100 112" aria-hidden="true"><defs><pattern id="lamc" width="2.2" height="4" patternUnits="userSpaceOnUse"><rect width="2.2" height="4" fill="#1a1b1d"/><rect width=".7" height="4" fill="#2a2c2f"/></pattern><linearGradient id="lamSc" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset=".25" stop-color="#fff" stop-opacity=".07"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient><radialGradient id="bellc" cx=".3" cy=".22" r=".95"><stop offset="0" stop-color="#4a4d52"/><stop offset=".18" stop-color="#1c1d20"/><stop offset=".6" stop-color="#0b0b0c"/><stop offset="1" stop-color="#020202"/></radialGradient><filter id="softc" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter><radialGradient id="nutc" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#d8dadc"/><stop offset=".5" stop-color="#8e9296"/><stop offset="1" stop-color="#4c5054"/></radialGradient></defs><ellipse cx="52" cy="108" rx="50" ry="5" fill="rgba(0,0,0,.7)"/><rect x="4" y="8" width="92" height="98" rx="2" fill="url(#lamc)"/><rect x="4" y="8" width="92" height="98" rx="2" fill="url(#lamSc)"/><rect x="4" y="8" width="92" height="3" fill="rgba(255,255,255,.08)"/><rect x="16" y="20" width="68" height="88" rx="16" fill="#000"/><rect x="17" y="20" width="66" height="86" rx="15" fill="url(#bellc)"/><path filter="url(#softc)" d="M24 36 Q25 25 36 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="4" stroke-linecap="round"/><rect filter="url(#softc)" x="22" y="40" width="7" height="52" rx="3.5" fill="rgba(255,255,255,.1)"/><path d="M76 30 L76 96" stroke="rgba(255,255,255,.06)" stroke-width="2"/><rect x="0" y="104" width="100" height="4" rx="1" fill="#0a0a0b" stroke="rgba(255,255,255,.06)" stroke-width=".6"/><g transform="translate(10 15)"><polygon points="4.6,0 2.3,4 -2.3,4 -4.6,0 -2.3,-4 2.3,-4" fill="url(#nutc)" stroke="#3a3d40" stroke-width=".5"/><circle r="1.7" fill="#2a2c2f"/></g><g transform="translate(90 15)"><polygon points="4.6,0 2.3,4 -2.3,4 -4.6,0 -2.3,-4 2.3,-4" fill="url(#nutc)" stroke="#3a3d40" stroke-width=".5"/><circle r="1.7" fill="#2a2c2f"/></g></svg></div></div></div>
+
+  <div class="tank" aria-hidden="true"><canvas id="springs"></canvas></div>
+
+  <div class="wordmark" aria-hidden="true"><span>M</span><span>E</span><span>G</span><span>A</span><span>T</span><span>R</span><span>O</span><span>N</span></div>
+  <div class="knobs" id="knobs"></div>
+  <div class="tuner" id="tuner" role="group" aria-label="Tuner">
+    <div class="tn-leds" id="tnLeds" aria-hidden="true"></div>
+  </div>
+  <span class="status" id="status" role="status"></span>
+  <div class="grip" id="grip" role="slider" tabindex="0" aria-label="Plugin size" aria-valuemin="60" aria-valuemax="160" title="Drag to resize · double-click for 100%">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M15 5 L5 15 M15 9 L9 15 M15 13 L13 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <span class="gp" id="gripPct"></span>
+  </div>
+  <div class="bolts" aria-hidden="true"><div class="bolt"><svg viewBox="0 0 30 56" aria-hidden="true"><defs><radialGradient id="bh0" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#c4c7ca"/><stop offset=".45" stop-color="#8f9397"/><stop offset=".78" stop-color="#6b6f73"/><stop offset="1" stop-color="#46494d"/></radialGradient><linearGradient id="bs0" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020203"/><stop offset="1" stop-color="#141619"/></linearGradient></defs><rect x="8" y="2" width="14" height="52" rx="7" fill="url(#bs0)" stroke="rgba(255,255,255,.07)" stroke-width="1"/><ellipse cx="15.8" cy="29.4" rx="11.6" ry="11.2" fill="rgba(0,0,0,.6)"/><circle cx="15" cy="28" r="11.3" fill="url(#bh0)" stroke="#4f5357" stroke-width=".7"/><circle cx="15" cy="28" r="8.8" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28 12.4,23.5 17.6,23.5" fill="#1b1d20" stroke="#3a3e42" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".7"/><polygon points="18.4,28 16.7,30.9 13.3,30.9 11.6,28 13.3,25.1 16.7,25.1" fill="#0b0c0d"/><path d="M7.6 23 A 9 9 0 0 1 13.8 19.2" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="bolt"><svg viewBox="0 0 30 56" aria-hidden="true"><defs><radialGradient id="bh1" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#c4c7ca"/><stop offset=".45" stop-color="#8f9397"/><stop offset=".78" stop-color="#6b6f73"/><stop offset="1" stop-color="#46494d"/></radialGradient><linearGradient id="bs1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020203"/><stop offset="1" stop-color="#141619"/></linearGradient></defs><rect x="8" y="2" width="14" height="52" rx="7" fill="url(#bs1)" stroke="rgba(255,255,255,.07)" stroke-width="1"/><ellipse cx="15.8" cy="29.4" rx="11.6" ry="11.2" fill="rgba(0,0,0,.6)"/><circle cx="15" cy="28" r="11.3" fill="url(#bh1)" stroke="#4f5357" stroke-width=".7"/><circle cx="15" cy="28" r="8.8" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28 12.4,23.5 17.6,23.5" fill="#1b1d20" stroke="#3a3e42" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".7"/><polygon points="18.4,28 16.7,30.9 13.3,30.9 11.6,28 13.3,25.1 16.7,25.1" fill="#0b0c0d"/><path d="M7.6 23 A 9 9 0 0 1 13.8 19.2" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="bolt"><svg viewBox="0 0 30 56" aria-hidden="true"><defs><radialGradient id="bh2" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#c4c7ca"/><stop offset=".45" stop-color="#8f9397"/><stop offset=".78" stop-color="#6b6f73"/><stop offset="1" stop-color="#46494d"/></radialGradient><linearGradient id="bs2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020203"/><stop offset="1" stop-color="#141619"/></linearGradient></defs><rect x="8" y="2" width="14" height="52" rx="7" fill="url(#bs2)" stroke="rgba(255,255,255,.07)" stroke-width="1"/><ellipse cx="15.8" cy="29.4" rx="11.6" ry="11.2" fill="rgba(0,0,0,.6)"/><circle cx="15" cy="28" r="11.3" fill="url(#bh2)" stroke="#4f5357" stroke-width=".7"/><circle cx="15" cy="28" r="8.8" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28 12.4,23.5 17.6,23.5" fill="#1b1d20" stroke="#3a3e42" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".7"/><polygon points="18.4,28 16.7,30.9 13.3,30.9 11.6,28 13.3,25.1 16.7,25.1" fill="#0b0c0d"/><path d="M7.6 23 A 9 9 0 0 1 13.8 19.2" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="bolt"><svg viewBox="0 0 30 56" aria-hidden="true"><defs><radialGradient id="bh3" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#c4c7ca"/><stop offset=".45" stop-color="#8f9397"/><stop offset=".78" stop-color="#6b6f73"/><stop offset="1" stop-color="#46494d"/></radialGradient><linearGradient id="bs3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020203"/><stop offset="1" stop-color="#141619"/></linearGradient></defs><rect x="8" y="2" width="14" height="52" rx="7" fill="url(#bs3)" stroke="rgba(255,255,255,.07)" stroke-width="1"/><ellipse cx="15.8" cy="29.4" rx="11.6" ry="11.2" fill="rgba(0,0,0,.6)"/><circle cx="15" cy="28" r="11.3" fill="url(#bh3)" stroke="#4f5357" stroke-width=".7"/><circle cx="15" cy="28" r="8.8" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28 12.4,23.5 17.6,23.5" fill="#1b1d20" stroke="#3a3e42" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".7"/><polygon points="18.4,28 16.7,30.9 13.3,30.9 11.6,28 13.3,25.1 16.7,25.1" fill="#0b0c0d"/><path d="M7.6 23 A 9 9 0 0 1 13.8 19.2" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="bolt"><svg viewBox="0 0 30 56" aria-hidden="true"><defs><radialGradient id="bh4" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#c4c7ca"/><stop offset=".45" stop-color="#8f9397"/><stop offset=".78" stop-color="#6b6f73"/><stop offset="1" stop-color="#46494d"/></radialGradient><linearGradient id="bs4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020203"/><stop offset="1" stop-color="#141619"/></linearGradient></defs><rect x="8" y="2" width="14" height="52" rx="7" fill="url(#bs4)" stroke="rgba(255,255,255,.07)" stroke-width="1"/><ellipse cx="15.8" cy="29.4" rx="11.6" ry="11.2" fill="rgba(0,0,0,.6)"/><circle cx="15" cy="28" r="11.3" fill="url(#bh4)" stroke="#4f5357" stroke-width=".7"/><circle cx="15" cy="28" r="8.8" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28 12.4,23.5 17.6,23.5" fill="#1b1d20" stroke="#3a3e42" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".7"/><polygon points="18.4,28 16.7,30.9 13.3,30.9 11.6,28 13.3,25.1 16.7,25.1" fill="#0b0c0d"/><path d="M7.6 23 A 9 9 0 0 1 13.8 19.2" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg></div><div class="bolt"><svg viewBox="0 0 30 56" aria-hidden="true"><defs><radialGradient id="bh5" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#c4c7ca"/><stop offset=".45" stop-color="#8f9397"/><stop offset=".78" stop-color="#6b6f73"/><stop offset="1" stop-color="#46494d"/></radialGradient><linearGradient id="bs5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020203"/><stop offset="1" stop-color="#141619"/></linearGradient></defs><rect x="8" y="2" width="14" height="52" rx="7" fill="url(#bs5)" stroke="rgba(255,255,255,.07)" stroke-width="1"/><ellipse cx="15.8" cy="29.4" rx="11.6" ry="11.2" fill="rgba(0,0,0,.6)"/><circle cx="15" cy="28" r="11.3" fill="url(#bh5)" stroke="#4f5357" stroke-width=".7"/><circle cx="15" cy="28" r="8.8" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28 12.4,23.5 17.6,23.5" fill="#1b1d20" stroke="#3a3e42" stroke-width=".6"/><polygon points="20.2,28 17.6,32.5 12.4,32.5 9.8,28" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".7"/><polygon points="18.4,28 16.7,30.9 13.3,30.9 11.6,28 13.3,25.1 16.7,25.1" fill="#0b0c0d"/><path d="M7.6 23 A 9 9 0 0 1 13.8 19.2" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg></div></div>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  // the plugin remembers nothing between sessions: storage is a no-op, and old saved settings are wiped once
+  try { Object.keys(window.localStorage).forEach(function(k){ if (k.indexOf("megatron-") === 0 || k.indexOf("valve6-") === 0) window.localStorage.removeItem(k); }); } catch(e){}
+  var localStorage = { getItem:function(){ return null; }, setItem:function(){}, removeItem:function(){} };
+  var $ = function(id){ return document.getElementById(id); };
+  var amp = $("amp");
+  var UI_SCALE = 1, ZOOM = 1;   // UI_SCALE = chosen size, ZOOM = what is applied (shrinks further to fit small screens)
+  try { var us = parseFloat(localStorage.getItem("megatron-scale")); if (us >= 0.6 && us <= 1.6) UI_SCALE = us; } catch(e){}
+
+  /* ---------- skins ---------- */
+  var savedSkin = null;
+  try { savedSkin = localStorage.getItem("megatron-skin"); } catch(e){}
+  function setSkin(s){
+    amp.dataset.skin = s;
+    document.querySelectorAll("#skins button").forEach(function(b){ b.setAttribute("aria-pressed", b.dataset.skin === s ? "true" : "false"); });
+    try { localStorage.setItem("megatron-skin", s); } catch(e){}
+    drawCurve();
+  }
+
+  /* ---------- tubes ---------- */
+  var plates = [], tubeEls = [], tubeSw = [], tubeLeds = [];
+  // diodes: POWER lights when running; each tube lights when its switch is on and the amp is powered
+  function updateLeds(){
+    var on = typeof running !== "undefined" && running;
+    var pl = document.getElementById("led"); if (pl) pl.classList.toggle("on", !!on);
+    tubeLeds.forEach(function(l, k){ l.classList.toggle("on", !!on && tubeOn[k]); });
+  }
+  var tubeOn = [false, false, false, false, false, true]; // default: tube 1 (leftmost) on
+  try { var th = JSON.parse(localStorage.getItem("megatron-tubeon") || "null"); if (Array.isArray(th) && th.length === 6) tubeOn = th.map(function(v){ return v !== false; }); } catch(e){}
+  var TOG = '<svg viewBox="0 0 60 92" aria-hidden="true">           <defs>             <linearGradient id="chr" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fbfcfc"/><stop offset=".45" stop-color="#a7abae"/><stop offset=".7" stop-color="#e9ebec"/><stop offset="1" stop-color="#6b6f73"/></linearGradient>             <linearGradient id="lev" x1="0" x2="1"><stop offset="0" stop-color="#6d7175"/><stop offset=".3" stop-color="#f7f8f8"/><stop offset=".55" stop-color="#b9bdc0"/><stop offset="1" stop-color="#55595d"/></linearGradient>             <radialGradient id="hole" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#1a1b1c"/><stop offset=".7" stop-color="#3a3d40"/><stop offset="1" stop-color="#8d9194"/></radialGradient>           </defs>           <polygon points="30,30 43.9,38 43.9,54 30,62 16.1,54 16.1,38" fill="url(#chr)" stroke="#5d6165" stroke-width=".8"/>           <circle cx="30" cy="46" r="10.5" fill="url(#chr)" stroke="#6b6f73" stroke-width=".6"/>           <circle cx="30" cy="46" r="8.6" fill="none" stroke="#7d8185" stroke-width=".7"/>           <circle cx="30" cy="46" r="7" fill="none" stroke="#8d9194" stroke-width=".6"/>           <circle cx="30" cy="46" r="5" fill="url(#hole)"/>           <g class="lever">             <ellipse cx="30" cy="47" rx="6" ry="3" fill="rgba(0,0,0,.35)"/>             <path d="M26.2 46 L24.6 11 Q30 4.5 35.4 11 L33.8 46 Z" fill="url(#lev)" stroke="#55595d" stroke-width=".6"/>             <path d="M28 44 L27 13" stroke="rgba(255,255,255,.85)" stroke-width="1.3" stroke-linecap="round"/>           </g>         </svg>';
+  // clicking a tube switches it on/off (dragging still sets its drive)
+  function toggleTube(k){
+    tubeOn[k] = !tubeOn[k];
+    try { localStorage.setItem("megatron-tubeon", JSON.stringify(tubeOn)); } catch(e){}
+    applyParams(); syncTube(k); drawCurve(); updateLeds();
+  }
+  for (var i = 0; i < 6; i++){
+    var t = document.createElement("div"); t.className = "tube";
+    t.setAttribute("role", "slider"); t.tabIndex = 0;
+    t.setAttribute("aria-label", "Tube " + (6 - i) + " drive"); t.setAttribute("aria-valuemin", "0"); t.setAttribute("aria-valuemax", "30");
+    t.innerHTML = '<span class="drv"></span><div class="glass"><svg class="guts" viewBox="0 0 38 80" preserveAspectRatio="none" aria-hidden="true"><ellipse cx="19" cy="9" rx="8" ry="2.6" fill="#55595d" opacity=".55"/><ellipse cx="19" cy="8.4" rx="6" ry="1.6" fill="#9a9ea2" opacity=".35"/><line x1="10.5" y1="15" x2="10.5" y2="80" stroke="#8e9296" stroke-width=".7"/><line x1="27.5" y1="15" x2="27.5" y2="80" stroke="#8e9296" stroke-width=".7"/><rect x="7" y="17" width="24" height="2.6" rx=".8" fill="rgba(230,235,240,.32)" stroke="rgba(255,255,255,.25)" stroke-width=".3"/><rect x="7" y="64.5" width="24" height="2.6" rx=".8" fill="rgba(230,235,240,.32)" stroke="rgba(255,255,255,.25)" stroke-width=".3"/><line x1="11.5" y1="21.0" x2="13.5" y2="21.8" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="21.0" x2="26.5" y2="21.8" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="22.6" x2="13.5" y2="23.4" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="22.6" x2="26.5" y2="23.4" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="24.2" x2="13.5" y2="25.0" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="24.2" x2="26.5" y2="25.0" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="25.8" x2="13.5" y2="26.6" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="25.8" x2="26.5" y2="26.6" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="27.4" x2="13.5" y2="28.2" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="27.4" x2="26.5" y2="28.2" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="29.0" x2="13.5" y2="29.8" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="29.0" x2="26.5" y2="29.8" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="30.6" x2="13.5" y2="31.4" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="30.6" x2="26.5" y2="31.4" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="32.2" x2="13.5" y2="33.0" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="32.2" x2="26.5" y2="33.0" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="33.8" x2="13.5" y2="34.6" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="33.8" x2="26.5" y2="34.6" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="35.4" x2="13.5" y2="36.2" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="35.4" x2="26.5" y2="36.2" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="37.0" x2="13.5" y2="37.8" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="37.0" x2="26.5" y2="37.8" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="38.6" x2="13.5" y2="39.4" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="38.6" x2="26.5" y2="39.4" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="40.2" x2="13.5" y2="41.0" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="40.2" x2="26.5" y2="41.0" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="41.8" x2="13.5" y2="42.6" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="41.8" x2="26.5" y2="42.6" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="43.4" x2="13.5" y2="44.2" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="43.4" x2="26.5" y2="44.2" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="45.0" x2="13.5" y2="45.8" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="45.0" x2="26.5" y2="45.8" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="46.6" x2="13.5" y2="47.4" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="46.6" x2="26.5" y2="47.4" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="48.2" x2="13.5" y2="49.0" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="48.2" x2="26.5" y2="49.0" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="49.8" x2="13.5" y2="50.6" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="49.8" x2="26.5" y2="50.6" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="51.4" x2="13.5" y2="52.2" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="51.4" x2="26.5" y2="52.2" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="53.0" x2="13.5" y2="53.8" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="53.0" x2="26.5" y2="53.8" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="54.6" x2="13.5" y2="55.4" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="54.6" x2="26.5" y2="55.4" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="56.2" x2="13.5" y2="57.0" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="56.2" x2="26.5" y2="57.0" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="57.8" x2="13.5" y2="58.6" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="57.8" x2="26.5" y2="58.6" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="59.4" x2="13.5" y2="60.2" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="59.4" x2="26.5" y2="60.2" stroke="#7d8185" stroke-width=".35"/><line x1="11.5" y1="61.0" x2="13.5" y2="61.8" stroke="#7d8185" stroke-width=".35"/><line x1="24.5" y1="61.0" x2="26.5" y2="61.8" stroke="#7d8185" stroke-width=".35"/><path class="fil" d="M17 21 L17 16.5 Q19 14.5 21 16.5 L21 21" fill="none" stroke-width=".9"/><path d="M8 80 L10.75 72 L12 67" fill="none" stroke="#9a9ea2" stroke-width=".55"/><path d="M12 80 L13.75 72 L15 67" fill="none" stroke="#9a9ea2" stroke-width=".55"/><path d="M16 80 L16.75 72 L17.5 67" fill="none" stroke="#9a9ea2" stroke-width=".55"/><path d="M22 80 L21.25 72 L20.5 67" fill="none" stroke="#9a9ea2" stroke-width=".55"/><path d="M26 80 L24.25 72 L23 67" fill="none" stroke="#9a9ea2" stroke-width=".55"/><path d="M30 80 L27.25 72 L26 67" fill="none" stroke="#9a9ea2" stroke-width=".55"/></svg><div class="plate"></div></div><div class="base"></div>';
+    $("tubes").appendChild(t); plates.push(t); tubeEls.push(t);
+  }
+
+  /* ---------- knobs ---------- */
+  var KNOBS = [
+    { id:"vol",  l:"V", n:"VOLUME" },
+    { id:"rev",  l:"R", n:"REVERB" },
+    { id:"shape", l:"S", n:"SHAPE" },
+    { id:"gain", l:"G", n:"GAIN" }
+  ];
+  var vals = { vol:5, shape:5, gain:5, rev:0 };
+  try { var sv = JSON.parse(localStorage.getItem("megatron-knobs") || "null"); if (sv) Object.keys(vals).forEach(function(k){ if (typeof sv[k] === "number") vals[k] = sv[k]; }); } catch(e){}
+
+  var LABELS = [[23.2,96.8],[10.5,76.1],[8.6,51.9],[17.9,29.4],[36.4,13.7],[60,8],[83.6,13.7],[102.1,29.4],[111.4,51.9],[109.5,76.1],[96.8,96.8]];
+  var DOTS = [[30.3,89.7],[20,73],[18.5,53.4],[26,35.3],[40.9,22.6],[60,18],[79.1,22.6],[94,35.3],[101.5,53.4],[100,73],[89.7,89.7]];
+  // glossy black bakelite skirted knob: skirt with white pointer dot, fluted/knurled grip, smooth glossy cap
+  var KNURL = (function(){
+    var d = "", n = 44;
+    for (var i = 0; i <= n * 2; i++){
+      var a = i / (n * 2) * Math.PI * 2, r = i % 2 ? 24.4 : 26;
+      d += (i ? "L" : "M") + (60 + Math.sin(a) * r).toFixed(2) + " " + (60 - Math.cos(a) * r).toFixed(2);
+    }
+    return d + "Z";
+  })();
+  // black knurled knob, brushed-aluminium cap, silver numbered skirt that turns with it; fixed index mark on the panel
+  var STEP = 360 / 11; // 0–10 evenly around the whole skirt
+  function knobSVG(uid, mini){
+    var R = mini ? 40 : 44, s = '<svg viewBox="' + (mini ? '0 0 120 120' : '10 16 100 100') + '" aria-hidden="true"><defs>' +
+      '<radialGradient id="kk' + uid + '" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".45" stop-color="#fff" stop-opacity=".12"/><stop offset=".72" stop-color="#000" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".38"/></radialGradient>' +
+      '<linearGradient id="kb' + uid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient>' +
+      '<radialGradient id="kc' + uid + '" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#f4f5f6"/><stop offset=".35" stop-color="#cfd2d5"/><stop offset=".7" stop-color="#e6e8ea"/><stop offset=".9" stop-color="#b3b7bb"/><stop offset="1" stop-color="#9a9ea2"/></radialGradient>' +
+      '<linearGradient id="kx' + uid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="rgba(255,255,255,0)"/><stop offset=".47" stop-color="rgba(255,255,255,0)"/><stop offset=".5" stop-color="rgba(255,255,255,.6)"/><stop offset=".53" stop-color="rgba(255,255,255,0)"/><stop offset="1" stop-color="rgba(255,255,255,0)"/></linearGradient>' +
+      '<radialGradient id="km' + uid + '" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".55" stop-color="#fff" stop-opacity=".03"/><stop offset="1" stop-color="#000" stop-opacity=".35"/></radialGradient>' +
+      '</defs>' +
+      '';
+    if (mini){
+      s += '<g fill="currentColor" font-size="9" text-anchor="middle" dominant-baseline="middle">';
+      LABELS.forEach(function(p,i){ s += '<text x="'+p[0]+'" y="'+p[1]+'">'+i+'</text>'; });
+      s += '</g><g fill="currentColor">';
+      DOTS.forEach(function(p){ s += '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="1.4"/>'; });
+      s += '</g><ellipse cx="61.5" cy="63" rx="28" ry="27.5" fill="rgba(0,0,0,.55)"/>' +
+        '<g class="ptr"><circle cx="60" cy="61.5" r="26.5" fill="rgba(0,0,0,.45)"/>' +
+        '<path d="' + KNURL + '" fill="#141517" stroke="#000" stroke-width=".5" stroke-linejoin="round"/>' +
+        '<circle cx="60" cy="60" r="22.2" fill="#121315" stroke="#000" stroke-width=".6"/>' +
+        '<line x1="60" y1="40.5" x2="60" y2="50" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>' +
+        // fixed light on the matte top and knurl
+        '<circle cx="60" cy="60" r="22.2" fill="url(#km' + uid + ')"/>' +
+        '<circle cx="60" cy="60" r="21.6" fill="none" stroke="rgba(255,255,255,.12)" stroke-width=".6"/>';
+    } else {
+    s += '<ellipse cx="61.5" cy="63" rx="' + (R + 1) + '" ry="' + R + '" fill="rgba(0,0,0,.55)"/>' +
+      // fixed index mark on the panel, above the knob
+      '<path d="M56.6 115 L63.4 115 L60 109 Z" fill="currentColor"/>' +
+      '<g class="ptr">' +
+        '<circle cx="60" cy="60" r="' + R + '" fill="#bfc2c5" stroke="rgba(0,0,0,.55)" stroke-width=".6"/>' +
+        '<circle cx="60" cy="60" r="' + (R - 0.8) + '" fill="none" stroke="rgba(255,255,255,.55)" stroke-width=".5"/>';
+    // printed scale: 0–10 counter-clockwise, so the current value sits at the index mark
+    for (var t = 0; !mini && t < 55; t++){
+      var ang = (t * STEP / 5) * Math.PI / 180, major = t % 5 === 0, r1 = R - 1.2, r2 = R - (major ? 5.5 : 4);
+      s += '<line x1="' + (60 + Math.sin(ang) * r1).toFixed(2) + '" y1="' + (60 - Math.cos(ang) * r1).toFixed(2) + '" x2="' + (60 + Math.sin(ang) * r2).toFixed(2) + '" y2="' + (60 - Math.cos(ang) * r2).toFixed(2) + '" stroke="#16181a" stroke-width="' + (major ? 0.9 : 0.55) + '"/>';
+    }
+    for (var nIdx = 0; !mini && nIdx <= 10; nIdx++){
+      var deg = -nIdx * STEP, ra = deg * Math.PI / 180, rr = R - 10.6;
+      s += '<text x="' + (60 + Math.sin(ra) * rr).toFixed(2) + '" y="' + (60 - Math.cos(ra) * rr).toFixed(2) + '" transform="rotate(' + (deg + 180) + ' ' + (60 + Math.sin(ra) * rr).toFixed(2) + ' ' + (60 - Math.cos(ra) * rr).toFixed(2) + ')" font-size="7.6" font-weight="600" fill="#141618" text-anchor="middle" dominant-baseline="central" font-family="IBM Plex Sans Condensed, sans-serif">' + nIdx + '</text>';
+    }
+    s += '<circle cx="60" cy="60" r="27" fill="#060607"/>' +
+         '<circle cx="60" cy="60" r="26.4" fill="none" stroke="rgba(255,255,255,.14)" stroke-width=".5"/>' +
+         '<path d="' + KNURL + '" transform="translate(60 60) scale(.94) translate(-60 -60)" fill="#141517" stroke="#000" stroke-width=".5" stroke-linejoin="round"/>' +
+      '</g>';
+    }
+    s +=
+      // fixed studio light: it stays put while the skirt and knurl turn underneath
+      (mini ? '' : '<path fill-rule="evenodd" fill="url(#kk' + uid + ')" d="M' + (60 - R) + ' 60 a' + R + ' ' + R + ' 0 1 0 ' + (2 * R) + ' 0 a' + R + ' ' + R + ' 0 1 0 -' + (2 * R) + ' 0 Z M33 60 a27 27 0 1 1 54 0 a27 27 0 1 1 -54 0 Z"/>') +
+      '<path fill-rule="evenodd" fill="url(#kb' + uid + ')" d="M' + (mini ? 33.9 : 35.5) + ' 60 a' + (mini ? 26.1 : 24.5) + ' ' + (mini ? 26.1 : 24.5) + ' 0 1 0 ' + (mini ? 52.2 : 49) + ' 0 a' + (mini ? 26.1 : 24.5) + ' ' + (mini ? 26.1 : 24.5) + ' 0 1 0 -' + (mini ? 52.2 : 49) + ' 0 Z M40.4 60 a19.6 19.6 0 1 1 39.2 0 a19.6 19.6 0 1 1 -39.2 0 Z"/>' +
+      // aluminium cap (not on SUSTAIN, which is all black)
+      (mini ? '' : '<circle cx="60" cy="60" r="19.6" fill="#0a0a0b"/><circle cx="60" cy="60" r="18" fill="url(#kc' + uid + ')"/>');
+    for (var ring = 1.4, ri = 0; !mini && ring < 17.4; ring += 1.45, ri++) s += '<circle cx="60" cy="60" r="' + ring.toFixed(2) + '" fill="none" stroke="' + (ri % 2 ? 'rgba(255,255,255,.16)' : 'rgba(70,74,78,.16)') + '" stroke-width=".5"/>';
+    s += (mini ? '' : '<circle cx="60" cy="60" r="18" fill="none" stroke="rgba(0,0,0,.45)" stroke-width=".7"/>') +
+      '</svg>';
+    return s;
+  }
+  var knobEls = {};
+  KNOBS.forEach(function(k){
+    var w = document.createElement("div"); w.className = "knob" + (/^(bass|mid|treb)$/.test(k.id) ? " small" : "");
+    w.innerHTML = '<span class="n">'+k.n+'</span>' +
+      '<div class="dial" role="slider" tabindex="0" aria-label="'+k.n.charAt(0)+k.n.slice(1).toLowerCase()+'" aria-valuemin="0" aria-valuemax="10"></div>' +
+      '<span class="val"></span>';
+    if (k.id === "sus"){ w.classList.add("mini"); $("switches").appendChild(w); }   // SUSTAIN lives in the switch row
+    else $("knobs").appendChild(w);
+    var dial = w.querySelector(".dial"); dial.innerHTML = knobSVG(k.id, k.id === "sus");
+    knobEls[k.id] = { dial:dial, ptr:dial.querySelector(".ptr"), val:w.querySelector(".val") };
+
+    var startY = 0, startV = 0, dragging = false;
+    dial.addEventListener("pointerdown", function(e){ placeVal(w); w.classList.add("turning"); dragging = true; startY = e.clientY; startV = vals[k.id]; dial.setPointerCapture(e.pointerId); dial.focus(); });
+    dial.addEventListener("pointermove", function(e){ if (!dragging) return; var f = e.shiftKey ? 400 : 150; setVal(k.id, startV + (startY - e.clientY) / f * 10); });
+    dial.addEventListener("pointerup", function(){ dragging = false; w.classList.remove("turning"); save(); });
+    dial.addEventListener("pointercancel", function(){ dragging = false; });
+    dial.addEventListener("wheel", function(e){ e.preventDefault(); flashVal(w); setVal(k.id, vals[k.id] + (e.deltaY < 0 ? 0.25 : -0.25)); save(); }, { passive:false });
+    dial.addEventListener("dblclick", function(){ setVal(k.id, 5); save(); });
+    dial.addEventListener("keydown", function(e){
+      var step = e.shiftKey ? 0.1 : 0.5, v = vals[k.id];
+      if (e.key === "ArrowUp" || e.key === "ArrowRight") v += step;
+      else if (e.key === "ArrowDown" || e.key === "ArrowLeft") v -= step;
+      else if (e.key === "Home") v = 0; else if (e.key === "End") v = 10; else return;
+      e.preventDefault(); flashVal(w); setVal(k.id, v); save();
+    });
+  });
+  /* gain-staging curve: [IN, stage1..stage6, OUT], each 0..1 */
+  var pts = [0.5, 0.35, 0.45, 0.6, 0.5, 0.7, 0.55, 0.5];
+  try { var sp = JSON.parse(localStorage.getItem("megatron-curve") || "null"); if (Array.isArray(sp) && sp.length === 8) pts = sp.map(function(v){ return Math.max(0, Math.min(1, +v || 0)); }); } catch(e){}
+  // GAIN knob: off (0), -32.4 dB (0.5) … 0 dB (5) … +36 dB (10), 7.2 dB per step
+  function gainDb(v){ return v <= 0 ? -150 : (v - 5) * 7.2; }   // 0 = pot fully down: no signal
+  function volDb(v){ return (v - 5) * 7; }           // VOLUME (master): -35 dB … 0 dB (at 5) … +35 dB, off at 0
+
+  /* GAIN drives the tube dots: a cascading profile, early stages break up first */
+  var PEAK = [0.62, 0.7, 0.78, 0.86, 0.86, 0.78];
+  function ss(x){ x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+  // GAIN drives the preamp tubes (1–4) in a cascade; VOLUME cranks the power tubes (5–6), like a master volume
+  // real-amp staging: GAIN is the preamp pot, each later preamp tube is pushed harder (cascade);
+  // VOLUME is the master, driving the power tubes; at GAIN 5 / VOLUME 5 everything sits on one line
+  var PRE_SLOPE = [0.55, 0.7, 0.85, 1.0], PWR_SLOPE = [0.85, 1.0];
+  function profile(i){
+    return 12 / 48;   // default: every tube at +12 dB; your tweaks ride on top
+    var g = vals.gain / 10 - 0.5, v = vals.vol / 10 - 0.5, y;
+    if (i < 4) y = 0.5 + (g > 0 ? PRE_SLOPE[i] * g : g);                      // up: later stages run hotter (cascade); down: all back off to clean
+    else y = 0.5 + (v > 0 ? PWR_SLOPE[i - 4] * v : v) + (g > 0 ? 0.15 * g : 0); // master drives the power tubes; a hot preamp adds a little push
+    return Math.max(0, Math.min(1, y));
+  }
+  var offs = null; // the player's hand tweaks, kept on top of the natural staging and remembered
+  try { var so = JSON.parse(localStorage.getItem("megatron-offs-rt4") || "null"); if (Array.isArray(so) && so.length === 6) offs = so.map(function(v){ return +v || 0; }); } catch(e){}
+  function lineOffs(){ var o = []; for (var i = 0; i < 6; i++){ var t = (i + 1) / 7, y = pts[0] + (pts[7] - pts[0]) * t; o.push(y - profile(i)); } return o; }
+  function autoStages(){
+    for (var i = 0; i < 6; i++){
+      pts[i + 1] = Math.round(Math.max(0, Math.min(1, profile(i, vals.gain) + offs[i])) * 200) / 200;
+      if (tubeEls[i]) syncTube(i);
+    }
+  }
+  function trimDb(p){ return (p - 0.5) * 48; }      // IN / OUT: -24 … +24 dB
+  function stageDb(p){ return p * V().stageMax; }   // tube stage drive: 0 … +24/+30 dB by voice
+
+  // value label sits on the knob cap (the cap centre is 44% down the skirted dial)
+  // value label sits just under the knob's white name label
+  function placeVal(w){ var n = w.querySelector(".n"), v = w.querySelector(".val"); if (n && v) v.style.top = (n.offsetTop + n.offsetHeight + 4 + v.offsetHeight / 2) + "px"; }
+  function flashVal(w){ placeVal(w); w.classList.add("turning"); clearTimeout(w._vt); w._vt = setTimeout(function(){ w.classList.remove("turning"); }, 900); }
+  function save(){ try { localStorage.setItem("megatron-knobs", JSON.stringify(vals)); localStorage.setItem("megatron-curve", JSON.stringify(pts)); if (offs) localStorage.setItem("megatron-offs-rt4", JSON.stringify(offs)); } catch(e){} }
+  function setVal(id, v){
+    v = Math.max(0, Math.min(10, Math.round(v * 10) / 10));
+    vals[id] = v;
+    if (id === "gain") pts[0] = v / 10;   // GAIN = first dot (the preamp gain pot)
+    if (id === "vol") pts[7] = v / 10;    // VOLUME = last dot (the master volume)
+    var el = knobEls[id];
+    el.ptr.setAttribute("transform", "rotate(" + (id === "sus" ? -135 + 27 * v : 180 + v * STEP) + " 60 60)"); // value turns to the index under the knob
+    el.dial.setAttribute("aria-valuenow", v);
+    el.dial.setAttribute("aria-valuetext", v.toFixed(1) + describe(id, v));
+    el.val.textContent = v.toFixed(1);   // readout shows just the 0–10 position
+    applyParams(); drawCurve();
+  }
+  function describe(id, v){
+    if (id === "shape"){ var x = (v - 5) / 5; return Math.abs(x) < 0.08 ? " · flat" : x < 0 ? " · mid push" : " · scoop"; }
+    if (false){ var db = (v - 5) * 3; return " · " + (db > 0 ? "+" : "") + db.toFixed(1) + " dB"; }
+    if (id === "gain"){ if (v <= 0) return " · off"; var g = gainDb(v); return " · in " + (g > 0 ? "+" : "") + g.toFixed(1) + " dB"; }
+    if (id === "sus") return v <= 0 ? " · off" : " · " + Math.round(v * 10) + "%";
+    if (id === "rev") return v <= 0 ? " · dry" : " · " + Math.round(v * 10) + "% wet";
+    if (id === "vol"){ if (v <= 0) return " · off"; var o = volDb(v); return " · out " + (o > 0 ? "+" : "") + o.toFixed(1) + " dB"; }
+    return "";
+  }
+
+  /* ---------- audio ---------- */
+  var ctx = null, stream = null, src = null, nodes = null, running = false, bypassed = false;
+
+  /* ---------- voicings ---------- */
+  var VOICES = {
+    classic: {
+      stageMax: 24, bias: [0.18,0.18,0.18,0.18,0.18,0.18], hardness: [1,1,1,1,1,1],
+      stageLp: [18000,18000,18000,18000,18000,18000],
+      preHp: 20, preMid: [900, 0, 0.9],
+      tone: { bass:[120, 0.7], mid:[750, 0.8], treb:[3200, 0.7] },
+      power: 0, sag: false,
+      cab: { hp:[40, 0.7], thump:[110, 0, 1], low:[250, 0, 0.8], pres:[2400, 0, 1.4], fizz:[4500, 0, 1], lp1:[7500, 0.6], lp2:[20000, 0.7] },
+      out: 0
+    },
+    doom: {
+      // British high-gain doom: thick fuzzy preamp, low-mid push, dark 4x12 with big thump, sagging power amp
+      stageMax: 30, bias: [0.12,0.2,0.28,0.32,0.36,0.4], hardness: [1,1.1,1.25,1.4,1.55,1.7],
+      stageLp: [11000,9500,8000,7000,6200,5600],       // each stage darkens a little more: smooth fuzz, not fizz
+      preHp: 75, preMid: [850, 5, 0.9],                  // tighten lows and push mids before the tubes
+      tone: { bass:[95, 0.7], mid:[560, 0.6], treb:[2300, 0.7] },
+      power: 10, sag: true,                              // power amp driven into compression
+      cab: { hp:[62, 0.9], thump:[105, 5, 1.1], low:[240, 2.5, 0.8], pres:[2200, 3, 1.4], fizz:[4300, -7, 1.2], lp1:[5200, 0.7], lp2:[6400, 0.7] },
+      out: -4
+    }
+  };
+  var voiceKey = "doom"; // the amp is voiced for doom only
+  function V(){ return VOICES[voiceKey]; }
+
+  var GATES = { off: null, light: -62, tight: -50 };
+  var gateKey = "off"; // no noise gate
+
+  function tubeCurve(bias, hard){
+    var n = 4096, c = new Float32Array(n), off = Math.tanh(bias);
+    for (var i = 0; i < n; i++){
+      var x = i / (n - 1) * 2 - 1;
+      var y = x * 3 * hard; // the curve spans ±3 so drive lives in the pre-gain
+      // asymmetric: positive half clips softer than negative (even harmonics, like a single triode)
+      var v = y >= 0 ? Math.tanh(y + bias) - off : (Math.tanh((y + bias) * 1.15) - off);
+      c[i] = v / (1 + off);
+    }
+    return c;
+  }
+  function powerCurve(){
+    var n = 2048, c = new Float32Array(n);
+    for (var i = 0; i < n; i++){ var x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * 2.2) / Math.tanh(2.2); }
+    return c;
+  }
+  // smooth reverb: dense, diffuse tail that darkens as it decays, soft onset, a faint spring shimmer
+  function smoothIR(){
+    var sr = ctx.sampleRate, len = Math.round(sr * 3.2), buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    var spring = springIR().getChannelData(0), eOld = 0, eNew = 0;
+    for (var q = 0; q < spring.length; q++) eOld += spring[q] * spring[q];
+    var seed = 12345; function rnd(){ seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; }
+    var pre = Math.round(sr * 0.018), y1 = 0, y2 = 0, rt60 = 2.4;
+    for (var i = pre; i < len; i++){
+      var t = (i - pre) / sr;
+      var env = (1 - Math.exp(-t / 0.035)) * Math.exp(-t * 6.91 / rt60);   // soft swell-in, smooth exponential decay
+      var fc = 5200 * Math.exp(-t * 1.1) + 700;                            // tail gets darker over time
+      var a = Math.exp(-2 * Math.PI * fc / sr);
+      y1 = (1 - a) * rnd() + a * y1; y2 = (1 - a) * y1 + a * y2;           // 2-pole smoothing: no grit
+      d[i] = y2 * env;
+    }
+    for (var j = 0; j < len && j < spring.length; j++) d[j] += spring[j] * 0.12; // just a hint of spring
+    for (var k = 0; k < len; k++) eNew += d[k] * d[k];
+    var g = Math.sqrt(0.5 / (eNew || 1));   // IR energy 0.5: full wet sits a few dB under the dry signal
+    for (var m = 0; m < len; m++) d[m] *= g;
+    return buf;
+  }
+  function springIR(){
+    var sr = ctx.sampleRate, len = Math.round(sr * 2.6), buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    var springs = [{ t:0.0331, f0:3600, f1:260, g:1.0 }, { t:0.0413, f0:3100, f1:220, g:0.8 }, { t:0.0467, f0:2700, f1:190, g:0.7 }];
+    var seed = 7; function rnd(){ seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; }
+    springs.forEach(function(sp){
+      var L = Math.round(sp.t * sr), amp = 0.5 * sp.g;
+      for (var e = 0; amp > 0.0015 && (e + 1) * L < len; e++){
+        var start = Math.round((e + 0.5) * L + rnd() * 30), ph = 0, k = Math.log(sp.f1 / sp.f0);
+        var cl = Math.round(L * (1.4 + e * 0.08));        // later echoes smear out more
+        for (var i = 0; i < cl && start + i < len; i++){
+          var u = i / cl, f = sp.f0 * Math.exp(k * u);
+          ph += 2 * Math.PI * f / sr;
+          var env = Math.sin(Math.PI * u) * Math.exp(-u * 1.5);
+          d[start + i] += Math.sin(ph) * env * amp + rnd() * env * amp * 0.25;
+        }
+        amp *= 0.74;
+      }
+    });
+    return buf;
+  }
+  /* ---------- tube engine (AudioWorklet, 2x oversampled, per-sample) ---------- */
+  var WORKLET_SRC = [
+    "function onePoleCoef(fc, fs){ return 1 - Math.exp(-2 * Math.PI * fc / fs); }",
+    // one triode gain stage: interstage gain -> grid (with bias shift / blocking) -> asymmetric triode curve -> inversion -> coupling cap HP -> Miller LP
+    // one real triode stage (volts in, volts out): grid with bias shift / blocking -> asymmetric clip (grid conduction at +hc V, cutoff at -hk V)
+    // -> inverting gain A -> partially bypassed cathode (bass shelf) -> coupling cap HP -> Miller/grid-stopper LP -> interstage divider
+    "function Triode(fs, c){ this.fs = fs; this.c = c; this.b = 0; this.hpX = 0; this.hpY = 0; this.lp = 0; this.sh = 0; this.g = 1; this.gT = 1; this.on = 0; this.onT = 0;",
+    "  this.hpR = Math.exp(-2 * Math.PI * c.hp / fs); this.lpC = onePoleCoef(c.lp, fs); this.shC = onePoleCoef(c.shF, fs); this.shG = Math.pow(10, c.shDb / 20); this.attG = Math.pow(10, c.att / 20);",
+    "  this.atk = onePoleCoef(1 / 0.0015, fs); this.rel = onePoleCoef(1 / 0.045, fs); this.sm = onePoleCoef(30, fs); }",
+    "Triode.prototype.tick = function(x){",
+    "  this.g += (this.gT - this.g) * this.sm; this.on += (this.onT - this.on) * this.sm;",
+    "  var c = this.c, hc = c.hc, hk = c.hk;",
+    // blocking: grid current on big positive swings charges the coupling cap and shifts the bias negative, recovering over ~45 ms
+    "  var tgt = x > hc * 0.5 ? -0.25 * (x - hc * 0.5) : 0; this.b += (tgt - this.b) * (tgt < this.b ? this.atk : this.rel);",
+    "  var v = x + this.b, y0;",
+    "  if (v >= 0) y0 = hc * Math.tanh(v / hc);                                   // grid conduction: soft knee",
+    "  else { var t = -v / hk; y0 = -hk * t / Math.pow(1 + Math.pow(t, 6), 1 / 6); }   // cutoff: hard knee",
+    "  var y = -this.g * y0;                                                      // inverting voltage gain",
+    "  this.sh += (y - this.sh) * this.shC; y = y - this.sh * (1 - this.shG);      // partially bypassed cathode: bass shelf",
+    "  var h = this.hpR * (this.hpY + y - this.hpX); this.hpX = y; this.hpY = h;    // coupling capacitor",
+    "  this.lp += (h - this.lp) * this.lpC;                                        // Miller / grid stopper / plate bypass",
+    "  return x * (1 - this.on) + this.lp * this.attG * this.on;                   // interstage divider; off = bypassed",
+    "};",
+    // realistic stage table, in signal order (first = next to GAIN): Soldano/5150/Rectifier-style cascade
+    "var STAGES = [",
+    "  { hc:1.5,  hk:2.5,  shDb:-3.2, shF:170, hp:8,  lp:6000,  att:-6.0  },   // V1A input stage, 1.8k partially bypassed",
+    "  { hc:2.0,  hk:2.5,  shDb:-4.7, shF:200, hp:8,  lp:12000, att:-3.3  },   // V1B second stage",
+    "  { hc:4.2,  hk:0.5,  shDb:0,    shF:100, hp:12, lp:1600,  att:-2.3  },   // V2A cold clipper, 39k unbypassed, 1nF plate bypass",
+    "  { hc:1.5,  hk:2.5,  shDb:-3.2, shF:170, hp:10, lp:10000, att:-20.0 },   // V2B lead stage (+ cathode follower), clips first",
+    "  { hc:5.0,  hk:1.0,  shDb:0,    shF:100, hp:20, lp:7000,  att:-6.0  },   // V3A cold clipper, 10k unbypassed",
+    "  { hc:1.75, hk:2.75, shDb:0,    shF:100, hp:12, lp:9000,  att:0     }    // V3B recovery stage, 2.2k fully bypassed",
+    "];",
+    "class MegaPre extends AudioWorkletProcessor {",
+    "  constructor(){ super(); var fs = sampleRate * 2; this.N = 6; this.st = []; for (var i = 0; i < this.N; i++) this.st.push(new Triode(fs, STAGES[i])); this.outScale = 0.01; this.prev = 0; this.path = 0; this.pathT = 0; this.pathC = onePoleCoef(40, sampleRate);",
+    "    var self = this; this.port.onmessage = function(e){ var d = e.data, any = 0; for (var i = 0; i < self.N; i++){ var s = self.st[i]; s.gT = Math.pow(10, d.g[i] / 20); s.onT = d.on[i] ? 1 : 0; if (d.on[i]) any = 1; } self.pathT = any; }; }",
+    "  process(inputs, outputs){",
+    "    var inp = inputs[0][0], n = outputs[0][0].length, st = this.st;",
+    "    for (var k = 0; k < n; k++){",
+    "      var x = inp ? inp[k] : 0, m = (this.prev + x) * 0.5; this.prev = x;",
+    "      var a = m, b = x, N = this.N, ta = [0,0,0,0,0,0], tb = [0,0,0,0,0,0];",
+    "      for (var i = 0; i < N; i++){ a = st[i].tick(a); ta[i] = a; }",
+    "      for (var j = 0; j < N; j++){ b = st[j].tick(b); tb[j] = b; }",
+    "      this.path += (this.pathT - this.path) * this.pathC;   // no tube in the path = no signal",
+    "      var pg = this.path * this.outScale;                                // plate volts -> line level (~±1 at full saturation)",
+    "      outputs[0][0][k] = (a + b) * 0.5 * pg;",
+    "      for (var t = 0; t < N; t++) outputs[t + 1][0][k] = (ta[t] + tb[t]) * 0.5 * pg;",
+    "    }",
+    "    return true;",
+    "  }",
+    "}",
+    "registerProcessor('mega-pre', MegaPre);",
+    // push-pull power amp: phase inverter -> two power tubes (class AB, crossover, bias shift) -> supply sag -> output transformer
+    "class MegaPwr extends AudioWorkletProcessor {",
+    "  constructor(){ super(); var fs = this.fs = sampleRate * 2; this.prev = 0; this.env = 0; this.V = 1; this.gA = 1; this.gB = 1; this.gAT = 1; this.gBT = 1; this.onA = 0; this.onB = 0; this.onAT = 0; this.onBT = 0; this.sag = 0.35;",
+    "    this.sm = onePoleCoef(30, fs); this.eAtt = onePoleCoef(1 / 0.004, fs); this.eRel = onePoleCoef(1 / 0.16, fs); this.vC = onePoleCoef(1 / 0.03, fs);",
+    "    this.lfC = onePoleCoef(110, fs); this.lf = 0; this.hfC = onePoleCoef(9000, fs); this.hf = 0; this.hpR = Math.exp(-2 * Math.PI * 38 / fs); this.hpX = 0; this.hpY = 0;",
+    "    var self = this; this.port.onmessage = function(e){ var d = e.data; self.gAT = Math.pow(10, d.gA / 20); self.gBT = Math.pow(10, d.gB / 20); self.onAT = d.onA ? 1 : 0; self.onBT = d.onB ? 1 : 0; self.sag = d.sag; }; }",
+    "  half(u, V, b0){ var w = u + b0, sp = w > 20 * 0.05 ? w : 0.05 * Math.log(1 + Math.exp(w / 0.05)); return V * Math.tanh(sp / V) - V * Math.tanh(b0 / V); }",
+    "  tick(x, taps){",
+    "    this.gA += (this.gAT - this.gA) * this.sm; this.gB += (this.gBT - this.gB) * this.sm; this.onA += (this.onAT - this.onA) * this.sm; this.onB += (this.onBT - this.onB) * this.sm;",
+    "    var p = 1.3 * Math.tanh(x / 1.3);                                  // phase inverter, gentle clip",
+    "    var b0 = 0.3;                                                     // healthy class-AB bias: no crossover grit on quiet tails",
+    "    var A = this.half(this.gA * p, this.V, b0), B = this.half(-this.gB * p, this.V, b0);",
+    "    A = A * this.onA + Math.max(0, p) * (1 - this.onA);                 // switched-off tube = ideal (clean) half",
+    "    B = B * this.onB + Math.max(0, -p) * (1 - this.onB);",
+    "    var y = A - B; taps[0] = A; taps[1] = -B;",
+    "    var ay = Math.abs(y); this.env += (ay - this.env) * (ay > this.env ? this.eAtt : this.eRel);",
+    "    var vt = 1 - this.sag * Math.min(1, this.env); this.V += (vt - this.V) * this.vC;   // supply sag",
+    "    this.lf += (y - this.lf) * this.lfC; y = y - this.lf + 0.85 * Math.tanh(this.lf / 0.85);   // output transformer core saturates on lows",
+    "    this.hf += (y - this.hf) * this.hfC; y = this.hf;                                         // OT top-end roll-off",
+    "    var h = this.hpR * (this.hpY + y - this.hpX); this.hpX = y; this.hpY = h; return h;",
+    "  }",
+    "  process(inputs, outputs){",
+    "    var inp = inputs[0][0], n = outputs[0][0].length, ta = [0,0], tb = [0,0];",
+    "    for (var k = 0; k < n; k++){",
+    "      var x = inp ? inp[k] : 0, m = (this.prev + x) * 0.5; this.prev = x;",
+    "      var ya = this.tick(m, ta), yb = this.tick(x, tb);",
+    "      outputs[0][0][k] = (ya + yb) * 0.5; outputs[1][0][k] = (ta[0] + tb[0]) * 0.5; outputs[2][0][k] = (ta[1] + tb[1]) * 0.5;",
+    "    }",
+    "    return true;",
+    "  }",
+    "}",
+    "registerProcessor('mega-pwr', MegaPwr);",
+    // look-ahead brickwall limiter: 5 ms look-ahead, -1 dBFS ceiling, smooth release; never lets the output clip
+    "class MegaLim extends AudioWorkletProcessor {",
+    "  constructor(){ super(); this.L = Math.max(16, Math.round(0.005 * sampleRate)); this.buf = new Float32Array(this.L); this.i = 0; this.g = 1; this.ceil = Math.pow(10, -1 / 20);",
+    "    this.att = 1 / (this.L * 0.5); this.rel = onePoleCoef(1 / 0.12, sampleRate); }",
+    "  process(inputs, outputs){",
+    "    var inp = inputs[0][0], out = outputs[0][0], n = out.length, L = this.L, buf = this.buf, c = this.ceil;",
+    "    for (var k = 0; k < n; k++){",
+    "      var x = inp ? inp[k] : 0, y = buf[this.i]; buf[this.i] = x; this.i = (this.i + 1) % L;",
+    "      var pk = 0; for (var j = 0; j < L; j++){ var a = buf[j] < 0 ? -buf[j] : buf[j]; if (a > pk) pk = a; }",
+    "      var tgt = pk > c ? c / pk : 1;",
+    "      if (tgt < this.g) this.g = Math.max(tgt, this.g - this.att); else this.g += (tgt - this.g) * this.rel;",
+    "      var o = y * this.g; out[k] = o > c ? c : (o < -c ? -c : o);",
+    "    }",
+    "    return true;",
+    "  }",
+    "}",
+    "registerProcessor('mega-lim', MegaLim);"
+  ].join("\n");
+  var workletURL = null;
+  // a data: URL works when the file is opened locally (file://); blob: is the fallback for hosted copies
+  function loadEngine(c){
+    var dataURL = "data:application/javascript;charset=utf-8," + encodeURIComponent(WORKLET_SRC);
+    return c.audioWorklet.addModule(dataURL).catch(function(){
+      if (!workletURL) workletURL = URL.createObjectURL(new Blob([WORKLET_SRC], { type:"application/javascript" }));
+      return c.audioWorklet.addModule(workletURL);
+    });
+  }
+  // stage gain in dB for each tube dot (0…1): 0…+35 dB for every tube
+  function stageGainDb(i, p){ return p * 48; }   // every tube: 0 … +48 dB of plate gain
+  // realistic default gains (signal order): V1A, V1B, V2A cold, V2B lead, V3A cold, V3B recovery
+  var REAL_DB = [36, 32, 7, 38, 16, 35];
+  function realP(i){ return REAL_DB[i] / 40; }
+
+  function biq(type, f, q, g){ var b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q != null) b.Q.value = q; if (g != null) b.gain.value = g; return b; }
+
+  function buildGraph(){
+    var n = {};
+    n.split = ctx.createChannelSplitter(2);
+    n.pick = ctx.createGain(); n.pick.channelCount = 1; n.pick.channelCountMode = "explicit";
+    n.inTrim = ctx.createGain();
+    n.inMeter = ctx.createAnalyser(); n.inMeter.fftSize = 1024;
+    n.preHp = biq("highpass", 20, 0.7);
+    n.preMid = biq("peaking", 850, 0.9, 0);
+    // preamp: all 6 tubes are cascaded triodes; the power amp (phase inverter + push-pull pair) is a fixed section behind it
+    n.pre = new AudioWorkletNode(ctx, "mega-pre", { numberOfInputs:1, numberOfOutputs:7, outputChannelCount:[1,1,1,1,1,1,1], channelCount:1, channelCountMode:"explicit" });
+    n.pwr = new AudioWorkletNode(ctx, "mega-pwr", { numberOfInputs:1, numberOfOutputs:3, outputChannelCount:[1,1,1], channelCount:1, channelCountMode:"explicit" });
+    n.stages = [];
+    for (var s = 0; s < 6; s++){
+      var st = { meter: ctx.createAnalyser() }; st.meter.fftSize = 1024;
+      n.pre.connect(st.meter, s + 1);
+      n.stages.push(st);
+    }
+    n.bass = biq("lowshelf", 120); n.mid = biq("peaking", 750, 0.8); n.treb = biq("highshelf", 3200);
+    // 4x12 cab
+    n.cHp = biq("highpass", 60, 0.9); n.cThump = biq("peaking", 105, 1.1, 0); n.cLow = biq("peaking", 240, 0.8, 0);
+    n.cPres = biq("peaking", 2200, 1.4, 0); n.cFizz = biq("peaking", 4300, 1.2, 0);
+    n.cLp1 = biq("lowpass", 5200, 0.7); n.cLp2 = biq("lowpass", 6400, 0.7);
+    n.wet = ctx.createGain();
+    n.dry = ctx.createGain(); n.dry.gain.value = 0;
+    n.vol = ctx.createGain();
+    n.gate = ctx.createGain();
+    n.outTrim = ctx.createGain();
+    n.toStereo = ctx.createChannelMerger(2);
+    n.outMeter = ctx.createAnalyser(); n.outMeter.fftSize = 1024;
+
+    // GAIN → pre-shape → 6 tube stages → tone stack → power amp → cab → VOLUME → gate
+    // learned input calibration sits before GAIN; the IN meter reads the raw interface signal
+    n.calib = ctx.createGain(); n.calib.gain.value = dB(calibDb);
+    n.inComp = ctx.createDynamicsCompressor(); n.inComp.knee.value = 6; n.inComp.attack.value = 0.005; n.inComp.release.value = 0.15;
+    n.inMake = ctx.createGain();
+    n.pick.connect(n.calib); n.calib.connect(n.inTrim);           // tubes get the untouched guitar signal
+    n.pick.connect(n.inMake); n.inMake.connect(n.inMeter);         // IN meter shows the input raised by the IN boost
+    // tuner reads the raw signal through a low-pass (tames harmonics, allows 4x decimation)
+    n.tuneHp = biq("highpass", 22, 0.7); n.tuneLp1 = biq("lowpass", 1000, 0.6); n.tuneLp2 = biq("lowpass", 1000, 0.6);
+    n.tuneAn = ctx.createAnalyser(); n.tuneAn.fftSize = 8192;
+    n.pick.connect(n.tuneHp); n.tuneHp.connect(n.tuneLp1); n.tuneLp1.connect(n.tuneLp2); n.tuneLp2.connect(n.tuneAn);
+   
+    n.inTrim.connect(n.preHp); n.preHp.connect(n.preMid); n.preMid.connect(n.pre);
+    n.pre.connect(n.gate, 0); n.gate.connect(n.bass);   // gate the preamp hiss, let reverb tails ring
+    n.bass.connect(n.mid); n.mid.connect(n.treb);
+    // spring reverb between preamp and power amp, as in a real combo
+    n.revSum = ctx.createGain();
+    n.revSend = biq("highpass", 220, 0.6);
+    n.revDwell = ctx.createWaveShaper(); n.revDwell.curve = powerCurve();
+    n.conv = ctx.createConvolver(); n.conv.normalize = false; n.conv.buffer = smoothIR();
+    n.revLp = biq("lowpass", 5200, 0.5);
+    n.revWet = ctx.createGain(); n.revWet.gain.value = 0;
+    n.revMeter = ctx.createAnalyser(); n.revMeter.fftSize = 2048;
+    n.treb.connect(n.revSum);
+    n.treb.connect(n.revSend); n.revSend.connect(n.conv); n.conv.connect(n.revLp); n.revLp.connect(n.revWet); // clean send: no dwell grit
+    n.revWet.connect(n.revSum); n.revWet.connect(n.revMeter);
+    // VOLUME is the master: between the preamp/reverb and the power amp
+    n.revSum.connect(n.vol); n.vol.connect(n.pwr); n.pwr.connect(n.cHp, 0);
+    n.cHp.connect(n.cThump); n.cThump.connect(n.cLow); n.cLow.connect(n.cPres); n.cPres.connect(n.cFizz); n.cFizz.connect(n.cLp1); n.cLp1.connect(n.cLp2);
+    // no auto-level: like a real amp, more gain / master means louder
+    n.cLp2.connect(n.wet); n.wet.connect(n.outTrim);
+    // safety limiter: catches peaks before they hard-clip at the interface
+    n.limit = new AudioWorkletNode(ctx, "mega-lim", { numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[1], channelCount:1, channelCountMode:"explicit" });   // brickwall, -1 dBFS
+    n.outComp = ctx.createDynamicsCompressor(); n.outComp.knee.value = 6; n.outComp.attack.value = 0.01; n.outComp.release.value = 0.2;
+    n.outMake = ctx.createGain();
+    n.loud = ctx.createGain();                                      // IN line: clean loudness boost, no effect on tone
+    n.outTrim.connect(n.loud); n.loud.connect(n.outComp); n.outComp.connect(n.outMake); n.outMake.connect(n.limit); n.limit.connect(n.toStereo, 0, 0); n.limit.connect(n.toStereo, 0, 1);
+    n.pick.connect(n.dry);
+    n.dry.connect(n.toStereo, 0, 0); n.dry.connect(n.toStereo, 0, 1);
+    n.toStereo.connect(n.outMeter); n.toStereo.connect(ctx.destination);
+    applyVoice(n);
+    return n;
+  }
+
+  function applyVoice(n){
+    n = n || nodes; if (!n) return;
+    var v = V(), t = ctx.currentTime, tc = 0.03;
+    function set(p, val){ p.setTargetAtTime(val, t, tc); }
+
+    set(n.preHp.frequency, v.preHp);
+    set(n.preMid.frequency, v.preMid[0]); set(n.preMid.gain, v.preMid[1]); set(n.preMid.Q, v.preMid[2]);
+    set(n.bass.frequency, v.tone.bass[0]); set(n.mid.frequency, v.tone.mid[0]); set(n.mid.Q, v.tone.mid[1]); set(n.treb.frequency, v.tone.treb[0]);
+    var c = v.cab;
+    set(n.cHp.frequency, c.hp[0]); set(n.cHp.Q, c.hp[1]);
+    [[n.cThump, c.thump], [n.cLow, c.low], [n.cPres, c.pres], [n.cFizz, c.fizz]].forEach(function(pr){ set(pr[0].frequency, pr[1][0]); set(pr[0].gain, pr[1][1]); set(pr[0].Q, pr[1][2]); });
+    set(n.cLp1.frequency, c.lp1[0]); set(n.cLp1.Q, c.lp1[1]); set(n.cLp2.frequency, c.lp2[0]); set(n.cLp2.Q, c.lp2[1]);
+    set(n.outTrim.gain, dB(v.out - 10));   // headroom: the limiter only catches peaks, VOLUME really sets loudness
+  }
+
+  function applyPower(n){
+    return; // replaced by the push-pull power section in the tube engine
+    n = n || nodes; if (!n) return;
+    var v = V(), t = ctx.currentTime, tc = 0.03, sum = 0;
+    for (var i = 1; i <= 6; i++) if (tubeOn[i - 1]) sum += pts[i];
+    var pw = v.power ? Math.min(1, (sum / 6) * 2.5) : 0;   // all tube dots down → no power-amp clipping or sag
+    var pd = dB(v.power * pw);
+    n.pDrive.gain.setTargetAtTime(pd * 0.45 * pw, t, tc);
+    n.pMake.gain.setTargetAtTime(pw ? pw * 1.6 / Math.sqrt(pd) : 0, t, tc);
+    n.pDry.gain.setTargetAtTime(1 - pw, t, tc);
+    n.sag.threshold.setTargetAtTime(v.sag ? -18 * pw : 0, t, tc);
+    n.sag.ratio.setTargetAtTime(v.sag ? 1 + 2.5 * pw : 1, t, tc);
+  }
+
+  function routeInput(){
+    if (!src || !nodes) return;
+    try { src.disconnect(); } catch(e){}
+    try { nodes.split.disconnect(); } catch(e){}
+    var ch = $("inCh").value, chans = src.channelCount || 2;
+    src.connect(nodes.split);
+    if (ch === "sum"){ nodes.split.connect(nodes.pick, 0); if (chans > 1) nodes.split.connect(nodes.pick, 1); }
+    else nodes.split.connect(nodes.pick, Math.min(+ch, 1));
+  }
+
+  function dB(x){ return Math.pow(10, x / 20); }
+  /* meter compressors: threshold from the line, 4:1, soft knee, half the reduction made back up */
+  var compThr = { in:0, out:0 };
+  // meter lines removed: IN boost and OUT compressor stay neutral
+  function applyComp(c, mk, thr, makeup){
+    if (!c) return; var t = ctx.currentTime, off = thr >= -0.05;
+    c.threshold.setTargetAtTime(off ? 0 : thr, t, 0.02); c.ratio.setTargetAtTime(off ? 1 : 4, t, 0.02);
+    // the browser compressor adds its own make-up of 0.6 x its full-range reduction; cancel it so the line really holds the level down
+    var builtIn = off ? 0 : 0.6 * -thr * (1 - 1 / 4);
+    mk.gain.setTargetAtTime(dB((off || !makeup ? 0 : -thr * 0.75 * 0.5) - builtIn), t, 0.05);
+  }
+  function applyParams(){
+    if (!nodes) return;
+    var t = ctx.currentTime, tc = 0.02;
+    // GAIN = input level into the tubes; VOLUME = output level
+    nodes.inTrim.gain.setTargetAtTime(vals.gain <= 0 ? 0 : dB(gainDb(vals.gain)), t, tc);   // GAIN 0 = no signal at all
+    var boost = dB(-compThr.in * 0.375);                            // IN line: 0 … +22.5 dB of clean level
+    nodes.loud.gain.setTargetAtTime(boost, t, 0.05); nodes.inMake.gain.setTargetAtTime(boost, t, 0.05);
+    applyComp(nodes.outComp, nodes.outMake, compThr.out, false);   // output threshold: no make-up, loud parts are pulled down to the line
+    var v = V();
+    nodes.pre.port.postMessage({ g:[0,1,2,3,4,5].map(function(i){ return stageGainDb(i, pts[i + 1]); }), on:tubeOn.slice(0, 6), lp:v.stageLp.slice(0, 6) });
+    // fixed power section: push-pull pair always on, driven by the master (VOLUME)
+    nodes.pwr.port.postMessage({ gA:0, gB:0, onA:true, onB:true, sag:v.sag ? 0.35 : 0.1 });
+    nodes.wet.gain.setTargetAtTime(bypassed ? 0 : 1, t, tc);
+    nodes.dry.gain.setTargetAtTime(bypassed ? 1 : 0, t, tc);
+    // SHAPE: left = mid push (thick, honky), noon = flat, right = scoop (big lows and highs, hollow mids)
+    var sx = (vals.shape - 5) / 5;
+    nodes.bass.gain.setTargetAtTime(24 * sx, t, tc);   // ±24 dB lows,
+    nodes.mid.gain.setTargetAtTime(-32 * sx, t, tc);   // ∓32 dB mids,
+    nodes.treb.gain.setTargetAtTime(20 * sx, t, tc);   // ±20 dB highs
+    var rv = vals.rev / 10; nodes.revWet.gain.setTargetAtTime(rv * Math.sqrt(rv) * 2.8, t, tc); // 4x the earlier range
+    nodes.vol.gain.setTargetAtTime(vals.vol <= 0 ? 0 : dB(volDb(vals.vol)), t, tc);
+  }
+
+  /* noise gate, keyed from the clean input (before the tubes) */
+  var gateOpen = true, gateHoldUntil = 0;
+  function runGate(inRms){
+    if (!nodes) return;
+    var thr = GATES[gateKey], t = ctx.currentTime;
+    if (thr == null){ if (!gateOpen){ nodes.gate.gain.setTargetAtTime(1, t, 0.005); gateOpen = true; } return; }
+    var lvl = 20 * Math.log10(inRms + 1e-9);
+    if (lvl > thr){ gateHoldUntil = t + 0.08; if (!gateOpen){ nodes.gate.gain.setTargetAtTime(1, t, 0.002); gateOpen = true; } }
+    else if (gateOpen && t > gateHoldUntil && lvl < thr - 4){ nodes.gate.gain.setTargetAtTime(0, t, 0.06); gateOpen = false; }
+  }
+
+  // only problems are shown (blocked input, device errors); normal status stays hidden
+  function status(msg, err, info){ var s = $("status"); s.textContent = err ? msg : ""; s.classList.toggle("err", !!err); }
+
+  /* ---------- tuner ---------- */
+  var NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"], tuneBuf = new Float32Array(8192), tuneDec = new Float32Array(2048), tuneHist = [], tuneFrame = 0, tuneHold = 0, tunePitch = 0;
+  var TN = 12, tunerEls = [], tunerWin = null;
+  function mixHex(a, b, t){ var c = [0, 2, 4].map(function(i){ var x = parseInt(a.substr(1 + i, 2), 16), y = parseInt(b.substr(1 + i, 2), 16); return Math.round(x + (y - x) * t); }); return "rgb(" + c.join(",") + ")"; }
+  (function buildTuner(){
+    var box = $("tnLeds");
+    function tri(side, t){ var e = document.createElement("i"); e.className = "tri " + side; e.style.setProperty("--d", mixHex("#3a1616", "#3d3018", t)); e.style.setProperty("--l", mixHex("#e5502f", "#f2a42c", t)); e.innerHTML = "<b></b>"; box.appendChild(e); return e; }
+    for (var i = 0; i < TN; i++) tunerEls.push(tri("l", i / (TN - 1)));            // flat: outer → inner
+    tunerWin = document.createElement("div"); tunerWin.className = "win"; tunerWin.id = "tnNote"; tunerWin.innerHTML = "&ndash;"; box.appendChild(tunerWin);
+    for (var j = 0; j < TN; j++) tunerEls.push(tri("r", 1 - j / (TN - 1)));        // sharp: inner → outer
+  })();
+  // cents: null = no note; |cents| ≤ 3 = in tune (green window); otherwise one arrow lights, further out = further from the centre
+  function setTuner(cents){
+    tunerEls.forEach(function(e){ e.classList.remove("on"); });
+    tunerWin.classList.remove("on");
+    if (cents == null) return;
+    if (Math.abs(cents) <= 3){ tunerWin.classList.add("on"); return; }
+    var n = Math.min(TN, Math.ceil((Math.abs(cents) - 3) / 4));
+    tunerEls[cents < 0 ? TN - n : TN + n - 1].classList.add("on");
+  }
+  function detectPitch(buf, sr){
+    var n = buf.length, rms = 0; for (var i = 0; i < n; i++) rms += buf[i] * buf[i]; rms = Math.sqrt(rms / n);
+    if (rms < 0.0015) return 0;
+    // 28 Hz … 1100 Hz: covers 5-string bass low B (30.9 Hz) up to high guitar notes
+    var minLag = Math.max(2, Math.floor(sr / 1100)), maxLag = Math.min(Math.floor(sr / 28), (n >> 1) - 2), W = n - maxLag;
+    var d = new Float32Array(maxLag + 2), run = 0; d[0] = 1;
+    for (var lag = 1; lag <= maxLag + 1; lag++){
+      var sum = 0; for (var j = 0; j < W; j++){ var df = buf[j] - buf[j + lag]; sum += df * df; }
+      run += sum; d[lag] = run ? sum * lag / run : 1;
+    }
+    var tau = -1, best = 1, bestT = -1;
+    for (var t = minLag; t <= maxLag; t++){
+      if (d[t] < best){ best = d[t]; bestT = t; }
+      if (d[t] < 0.2){ while (t + 1 <= maxLag && d[t + 1] < d[t]) t++; tau = t; break; }
+    }
+    if (tau < 0){ if (best < 0.35) tau = bestT; else return 0; }
+    var x0 = d[tau - 1] || d[tau], x2 = d[tau + 1] || d[tau], den = 2 * (2 * d[tau] - x2 - x0);
+    return sr / (den ? tau + (x2 - x0) / den : tau);
+  }
+  function runTuner(){
+    if (!nodes || (tuneFrame++ % 2)) return;                       // ~30 readings a second
+    nodes.tuneAn.getFloatTimeDomainData(tuneBuf);
+    for (var di = 0; di < 2048; di++){ var k4 = di * 4; tuneDec[di] = (tuneBuf[k4] + tuneBuf[k4 + 1] + tuneBuf[k4 + 2] + tuneBuf[k4 + 3]) * 0.25; }
+    var f = detectPitch(tuneDec, ctx.sampleRate / 4);
+    if (f){
+      // octave guard: a sudden exact octave jump on a held note is a harmonic, not a new note
+      if (tunePitch){ var oc = 1200 * Math.log2(f / tunePitch); if (Math.abs(Math.abs(oc) - 1200) < 40) f = tunePitch * Math.pow(2, (oc - Math.sign(oc) * 1200) / 1200); }
+      tuneHist.push(f); if (tuneHist.length > 5) tuneHist.shift();
+      var med = tuneHist.slice().sort(function(a, b){ return a - b; })[tuneHist.length >> 1];
+      tunePitch = tunePitch && Math.abs(1200 * Math.log2(med / tunePitch)) < 30 ? tunePitch * 0.6 + med * 0.4 : med;
+      tuneHold = 20;
+    }
+    else if (tuneHold > 0) tuneHold--;
+    else { tuneHist = []; tunePitch = 0; }
+    if (!tuneHold){ showTuner(null); return; }
+    var midi = 69 + 12 * Math.log2(tunePitch / REF), nn = Math.round(midi), cents = Math.round((midi - nn) * 100);
+    showTuner({ nn:nn, cents:cents, hz:tunePitch });
+  }
+  /* note head, flat/sharp lamps, Hz and cents readouts */
+  function showTuner(r){
+    setTuner(r ? r.cents : null);
+    var note = $("tnNote"), inTune = !!r && Math.abs(r.cents) <= 3;
+    note.classList.toggle("live", !!r);
+    if (!r){ note.innerHTML = "&ndash;"; return; }
+    var nm = NOTES[(r.nn % 12 + 12) % 12].replace("#", "\u266f");
+    note.innerHTML = nm + "<sub>" + (Math.floor(r.nn / 12) - 1) + "</sub>";
+  }
+  /* reference pitch (A4), like GTune */
+  var REF = 440;
+  try { var rf = parseInt(localStorage.getItem("megatron-ref"), 10); if (rf >= 415 && rf <= 466) REF = rf; } catch(e){}
+
+  /* ---------- auto gain staging ---------- */
+  var calibDb = 0, learnFrames = [], learning = false, autoDb = 0, infoTimer = null;
+  // learning disabled: input calibration stays at 0 dB
+  var learnStart = 0;
+  function startLearning(){ learning = true; learnFrames = []; learnStart = performance.now(); status("Learning your guitar level… play normally for a few seconds.", false, true); }
+  function finishLearning(){
+    learning = false;
+    var v = learnFrames.slice().sort(function(a, b){ return a - b; });
+    var p80 = v[Math.floor(v.length * 0.8)] || 0;
+    if (p80 > 0){
+      calibDb = Math.max(-12, Math.min(30, 20 * Math.log10(0.1 / p80)));   // aim: about -20 dBFS into the tubes
+      try { localStorage.setItem("megatron-calib", calibDb.toFixed(1)); } catch(e){}
+      if (nodes) nodes.calib.gain.setTargetAtTime(dB(calibDb), ctx.currentTime, 0.25);
+    }
+    status("Learned your level (" + (calibDb >= 0 ? "+" : "") + calibDb.toFixed(1) + " dB). Auto gain staging on.", false, true);
+    clearTimeout(infoTimer); infoTimer = setTimeout(function(){ if (!$("status").classList.contains("err")) status(""); }, 3500);
+  }
+  function autoStage(rawRms){
+    if (!nodes) return;
+    if (learning){
+      if (rawRms > 0.003) learnFrames.push(rawRms);           // only frames where you're actually playing
+      var el = (performance.now() - learnStart) / 1000;
+      if (learnFrames.length >= 180 || (el > 6 && learnFrames.length >= 30)) finishLearning();
+      else if (el > 20){ learning = false; status(""); }      // nothing played: keep the last learned level
+    }
+    return;                                                   // auto-level removed: real-amp loudness
+    var pre = new Float32Array(1024); nodes.preVol.getFloatTimeDomainData(pre);
+    var outR = rmsOf(pre).rms, inR = rawRms * dB(calibDb) * dB(gainDb(vals.gain));
+    if (outR < 1e-5) return;
+    var want = Math.max(-18, Math.min(18, 20 * Math.log10(inR / outR) + autoDb));
+    autoDb += (want - autoDb) * 0.02;                         // slow and smooth (~1–2 s)
+    nodes.autoLv.gain.setTargetAtTime(dB(autoDb), ctx.currentTime, 0.1);
+  }
+
+  // short device names so the list fits the interface boxes (full name stays in the tooltip)
+  function shortDev(n){
+    n = String(n)
+      .replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)/ig, "")            // USB ids like (1397:0507)
+      .replace(/\((R|TM|C)\)|[\u00ae\u2122]/ig, "")                  // (R) (TM)
+      .replace(/^(Default|Výchozí)\s*[-\u2013]\s*/i, "Default: ")
+      .replace(/^(Communications|Komunikace)\s*[-\u2013]\s*/i, "Comms: ")
+      .replace(/High Definition Audio/ig, "HD Audio")
+      .replace(/\s*Device\b/ig, "")
+      .replace(/\(\s*\)/g, "").replace(/\s+/g, " ").trim();
+    return n.length > 30 ? n.slice(0, 29).trim() + "\u2026" : n;
+  }
+  async function listDevices(){
+    var devs = await navigator.mediaDevices.enumerateDevices();
+    var inSel = $("inDev"), outSel = $("outDev"), curIn = inSel.value, curOut = outSel.value;
+    inSel.innerHTML = ""; outSel.innerHTML = '<option value="">System default</option>';
+    devs.forEach(function(d){
+      var full = d.label || (d.kind + " " + d.deviceId.slice(0, 6));
+      var o = document.createElement("option"); o.value = d.deviceId; o.textContent = shortDev(full); o.title = full;
+      if (d.kind === "audioinput") inSel.appendChild(o);
+      else if (d.kind === "audiooutput" && d.deviceId !== "default") outSel.appendChild(o);
+    });
+    var trackId = stream && stream.getAudioTracks()[0] && stream.getAudioTracks()[0].getSettings().deviceId;
+    try { if (!curIn) curIn = localStorage.getItem("megatron-indev") || ""; if (!curOut) curOut = localStorage.getItem("megatron-outdev") || ""; } catch(e){}
+    if (curIn && [].some.call(inSel.options, function(o){ return o.value === curIn; })) inSel.value = curIn;
+    else if (trackId) inSel.value = trackId;
+    if (curOut && [].some.call(outSel.options, function(o){ return o.value === curOut; })) outSel.value = curOut;
+    if (!ctx || typeof ctx.setSinkId !== "function"){ outSel.disabled = true; outSel.title = "This browser can't choose an output device; use Chrome or Edge."; }
+  }
+
+  async function openInput(deviceId){
+    if (stream) stream.getTracks().forEach(function(tr){ tr.stop(); });
+    var c = { echoCancellation:false, noiseSuppression:false, autoGainControl:false, channelCount:{ ideal:2 }, latency:{ ideal:0 } };
+    if (deviceId) c.deviceId = { exact:deviceId };
+    stream = await navigator.mediaDevices.getUserMedia({ audio:c, video:false });
+    if (src) try { src.disconnect(); } catch(e){}
+    src = ctx.createMediaStreamSource(stream);
+    routeInput();
+  }
+
+  async function powerOn(){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ status("This browser can't access audio inputs. Open the file in Chrome or Edge.", true); return; }
+    try {
+      // power-up default: clean tone (all tubes off)
+      for (var tk = 0; tk < 6; tk++) tubeOn[tk] = tk === 5;   // power-up: tube 1 (leftmost) is on
+      try { localStorage.setItem("megatron-tubeon", JSON.stringify(tubeOn)); } catch(e){}
+      tubeEls.forEach(function(t, k){ syncTube(k); }); updateLeds(); autoDb = 0;
+      setVal("rev", 0); setVal("shape", 5); setVal("vol", 5); setVal("gain", 5);   // power-up default: dry, flat, unity volume and gain
+      autoStages(); applyParams(); drawCurve(); save();   // natural staging + your remembered tweaks
+      ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint:"interactive" });
+      if (ctx.state === "suspended") { try { await ctx.resume(); } catch(e){} }   // phones start audio suspended
+      await loadEngine(ctx);
+      nodes = buildGraph(); applyParams();
+      var rem = ""; try { rem = localStorage.getItem("megatron-indev") || ""; } catch(e){}
+      try { await openInput($("inDev").value || rem || null); } catch(e1){ await openInput(null); }
+      await listDevices();
+      if ($("outDev").value) await setOutput($("outDev").value);
+      running = true;
+      $("power").setAttribute("aria-checked", "true"); updateLeds();
+      reportLatency();
+      // startLearning();   // learning disabled
+      tick();
+    } catch(err){
+      status(err && err.name === "NotAllowedError" ? "Microphone access was blocked. Allow it in the address bar, then try again." : "Couldn't start audio: " + (err && err.message || err), true);
+      powerOff(true);
+    }
+  }
+  function powerOff(keepMsg){
+    running = false;
+    if (stream) stream.getTracks().forEach(function(tr){ tr.stop(); });
+    if (ctx) ctx.close();
+    ctx = null; stream = null; src = null; nodes = null;
+    $("power").setAttribute("aria-checked", "false"); updateLeds();
+    $("mIn").style.height = "0"; $("mOut").style.height = "0"; showTuner(null);
+    stageLv = [0,0,0,0,0,0]; tubeEls.forEach(function(t, k){ syncTube(k); });
+    if (!keepMsg) status("Off.");
+  }
+  async function setOutput(id){
+    if (!ctx || typeof ctx.setSinkId !== "function") return;
+    try { await ctx.setSinkId(id || ""); reportLatency(); }
+    catch(err){ status("Couldn't switch output: " + err.message, true); }
+  }
+  function reportLatency(){
+    if (!ctx) return;
+    var ms = ((ctx.baseLatency || 0) + (ctx.outputLatency || 0)) * 1000;
+    var tr = stream && stream.getAudioTracks()[0];
+    status("Running at " + ctx.sampleRate + " Hz" + (ms ? " · ~" + ms.toFixed(1) + " ms output latency" : "") + (tr ? " · in: " + tr.label : ""));
+  }
+
+  var starting = false;   // one start at a time (a double tap on a phone used to start twice and break the first start)
+  $("power").addEventListener("click", async function(){
+    if (starting) return;
+    if (running){ powerOff(); return; }
+    starting = true; try { await powerOn(); } finally { starting = false; }
+  });
+  $("inDev").addEventListener("change", async function(){ try { localStorage.setItem("megatron-indev", this.value); } catch(e){} if (!ctx) return; try { await openInput(this.value); reportLatency(); } catch(err){ status("Couldn't open that input: " + err.message, true); } });
+  try { var sc = localStorage.getItem("megatron-inch"); $("inCh").value = sc || "1"; } catch(e){ $("inCh").value = "1"; }
+  $("inCh").addEventListener("change", function(){ try { localStorage.setItem("megatron-inch", this.value); } catch(e){} routeInput(); });
+  $("outDev").addEventListener("change", function(){ try { localStorage.setItem("megatron-outdev", this.value); } catch(e){} setOutput(this.value); });
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener("devicechange", function(){ if (ctx) listDevices(); });
+
+  /* ---------- meters + tubes ---------- */
+  var buf = new Float32Array(1024), lvIn = 0, lvOut = 0, stageLv = [0,0,0,0,0,0];
+  function level(an){ an.getFloatTimeDomainData(buf); var s = 0, pk = 0; for (var i = 0; i < buf.length; i++){ var a = Math.abs(buf[i]); s += a * a; if (a > pk) pk = a; } return { rms:Math.sqrt(s / buf.length), pk:pk }; }
+  function toH(rms){ var db = 20 * Math.log10(rms + 1e-9); return Math.max(0, Math.min(1, (db + 60) / 60)); }
+  // live waveforms: [stage1..stage6, output]; segment k of the curve draws waves[k]
+  var waves = [], wavesLive = false;
+  for (var w = 0; w < 7; w++) waves.push(new Float32Array(1024));
+  function rmsOf(a){ var s2 = 0, pk = 0; for (var i = 0; i < a.length; i++){ var v = Math.abs(a[i]); s2 += v * v; if (v > pk) pk = v; } return { rms:Math.sqrt(s2 / a.length), pk:pk }; }
+  function tick(){
+    if (!running || !nodes){ wavesLive = false; drawCurve(); return; }
+    var a = level(nodes.inMeter);
+    runGate(a.rms);
+    autoStage(a.rms);
+    runTuner();
+    lvIn = Math.max(toH(a.rms), lvIn * 0.9);
+    $("mIn").style.height = (lvIn * 100) + "%"; $("mIn").classList.toggle("clip", a.pk > 0.98);
+    nodes.stages.forEach(function(st, i){
+      st.meter.getFloatTimeDomainData(waves[i]);
+      var rmsI = rmsOf(waves[i]).rms; setAnc(i + 1, rmsI);
+      var lv = toH(rmsI);
+      // fast attack, slower release, like a filament
+      stageLv[i] = lv > stageLv[i] ? stageLv[i] + (lv - stageLv[i]) * 0.6 : stageLv[i] * 0.9 + lv * 0.1;
+      plates[i].style.setProperty("--heat", tubeOn[i] ? (0.1 + 0.9 * Math.pow(stageLv[i], 0.9)).toFixed(3) : "0");
+    });
+    nodes.revMeter.getFloatTimeDomainData(revBuf); revLv = Math.max(toH(rmsOf(revBuf).rms), revLv * 0.93);
+    drawSprings(true);
+    nodes.outMeter.getFloatTimeDomainData(waves[6]);
+    var b = rmsOf(waves[6]); setAnc(7, b.rms); setAnc(0, a.rms * dB(calibDb) * dB(gainDb(vals.gain)));
+    lvOut = Math.max(toH(b.rms), lvOut * 0.9);
+    $("mOut").style.height = (lvOut * 100) + "%"; $("mOut").classList.toggle("clip", b.pk > 0.98);
+    wavesLive = true;
+    drawCurve();
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------- gain-staging curve: IN · tube 1–6 · OUT ---------- */
+  var plasmaI = 0, lvlAnc = [0, 0, 0, 0, 0, 0, 0, 0];
+  function lvlTo01(rms){ var d = 20 * Math.log10(rms + 1e-9); return Math.max(0, Math.min(1, (d + 48) / 48)); }
+  function setAnc(i, rms){ var v = lvlTo01(rms); lvlAnc[i] = lvlAnc[i] ? lvlAnc[i] + (v - lvlAnc[i]) * 0.25 : v; }
+  var cv = $("curve"), active = -1, focusPt = 0, readout = $("readout");
+  var PT_NAMES = ["Gain", "Tube 6", "Tube 5", "Tube 4", "Tube 3", "Tube 2", "Tube 1", "Volume"]; // numbered 1–6 from the left
+  // label drawn at a curve point: just the dB value (screen readers still get the full text from ptText)
+  function ptDb(i){
+    var d;
+    if (i === 0){ if (vals.gain <= 0) return "off"; d = gainDb(vals.gain); }
+    else if (i === 7){ if (vals.vol <= 0) return "off"; d = volDb(vals.vol); }
+    else { if (!tubeOn[i - 1]) return "off"; d = stageGainDb(i - 1, pts[i]); }
+    return (d > 0 ? "+" : d < 0 ? "\u2212" : "") + Math.abs(d).toFixed(1) + " dB";
+  }
+  function ptText(i){
+    if (i === 0 || i === 7){ var d = i === 0 ? gainDb(vals.gain) : volDb(vals.vol); return PT_NAMES[i] + " " + (d > 0 ? "+" : "") + d.toFixed(1) + " dB"; }
+    if (!tubeOn[i - 1]) return PT_NAMES[i] + " off";
+    var sg = stageGainDb(i - 1, pts[i]); return PT_NAMES[i] + " stage gain " + (sg >= 0 ? "+" : "") + sg.toFixed(1) + " dB";
+  }
+  function geom(){
+    var W = cv.clientWidth, H = cv.clientHeight, padX = 12, padT = 12, padB = 20;
+    return { W:W, H:H,
+      x:function(i){ return padX + (7 - i) * (W - 2 * padX) / 7; }, // mirrored: VOL left, GAIN right,
+      y:function(p){ return padT + (1 - p) * (H - padT - padB); },
+      p:function(y){ return Math.max(0, Math.min(1, 1 - (y - padT) / (H - padT - padB))); } };
+  }
+  function drawCurve(){
+    var dpr = (window.devicePixelRatio || 1) * ZOOM, G = geom(), W = G.W, H = G.H;
+    if (!W || !H) return;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)){ cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); layoutTubes(); }
+    var g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    var glow = getComputedStyle(amp).getPropertyValue("--glow").trim() || "#ff9a4a";
+    g.strokeStyle = "#3a403d"; g.lineWidth = 1;
+    var GRID = [0, 12, 24, 36, 48];   // tube dB: lines every 12 dB up to the 48 dB top
+    for (var r = 0; r < GRID.length; r++){ var yy = Math.round(G.y(GRID[r] / 48)) + .5; g.beginPath(); g.moveTo(Math.round(G.x(7)) + .5, yy); g.lineTo(Math.round(G.x(0)) + .5, yy); g.stroke(); }   // from the VOL column to the GAIN column, no overhang
+    for (var i = 0; i < 8; i++){ var xx = Math.round(G.x(i)) + .5; g.beginPath(); g.moveTo(xx, Math.round(G.y(1))); g.lineTo(xx, Math.round(G.y(0)) + 1); g.stroke(); }   // exactly from the top line to the bottom line
+    g.fillStyle = "#8b938d"; g.font = "600 10px 'IBM Plex Sans Condensed', sans-serif"; g.textAlign = "center";
+    ["GAIN","6","5","4","3","2","1","VOL"].forEach(function(t, i){ g.fillText(t, Math.min(W - 12, Math.max(12, G.x(i))), H - 5); });
+
+    /* plasma: the signal path drawn as twisting high-voltage arcs */
+    var now = performance.now() / 1000, wAmp = (H - 32) * 0.15, P = [];
+    // the line is fixed on the six tube dots; only its ends (GAIN and VOL) follow the live level while playing
+    var anc = function(i){ if (i > 0 && i < 7) return G.y(pts[i]); return G.y(pts[i] + ((lvlAnc[i] || pts[i]) - pts[i]) * plasmaI); };
+    P.push({ x:G.x(0), y:anc(0), e:0, lv:wavesLive ? lvIn : 0 });
+    for (var sgi = 0; sgi < 7; sgi++){
+      var x0 = G.x(sgi), y0 = anc(sgi), x1 = G.x(sgi + 1), y1 = anc(sgi + 1);
+      var lvS = wavesLive ? (sgi < 6 ? stageLv[sgi] : lvOut) : 0;
+      var steps = Math.max(40, Math.round((x1 - x0) / 2)), wv = waves[sgi], len = wv.length, st0 = 0;
+      var span = Math.min(len / 2, Math.round((ctx ? ctx.sampleRate : 48000) * 0.01));
+      if (wavesLive){ for (var z = 1; z < len / 2; z++){ if (wv[z - 1] < 0 && wv[z] >= 0){ st0 = z; break; } } }
+      for (var j = 1; j <= steps; j++){
+        var tt = j / steps, env = Math.sin(Math.PI * tt);
+        var smp = wavesLive ? wv[st0 + Math.floor(tt * (span - 1))] : 0;
+        P.push({ x:x0 + (x1 - x0) * tt, y:y0 + (y1 - y0) * tt - Math.tanh(smp * 3) * wAmp * env, e:env, lv:lvS });
+      }
+    }
+    var STRANDS = [
+      { f:0.055, sp:1.7,  ph:0.0, a:1.0 },
+      { f:0.071, sp:-2.3, ph:2.1, a:0.85 },
+      { f:0.093, sp:2.9,  ph:4.0, a:0.7 },
+      { f:0.043, sp:-1.2, ph:5.2, a:0.6 }
+    ];
+    function strandPath(k){
+      var S = STRANDS[k]; g.beginPath();
+      for (var q = 0; q < P.length; q++){
+        var pt = P[q], spread = (2 + 10 * pt.lv) * pt.e;
+        var jit = wavesLive ? (Math.random() - 0.5) * (0.6 + 3 * pt.lv) * pt.e : 0;
+        var y = pt.y + Math.sin(pt.x * S.f + now * S.sp + S.ph) * spread + jit;
+        q ? g.lineTo(pt.x, y) : g.moveTo(pt.x, y);
+      }
+    }
+    // plasma only ignites with signal: no input (or power off) = unlit wire
+    var lvNow = wavesLive ? Math.max(lvIn, lvOut) : 0, target = Math.max(0, Math.min(1, (lvNow - 0.08) / 0.5));
+    if (!wavesLive) plasmaI = 0; else plasmaI += (target - plasmaI) * (target > plasmaI ? 0.5 : 0.12);
+    var I = plasmaI, flick = wavesLive ? 0.8 + Math.random() * 0.2 : 1;
+    if (I < 0.02){
+      g.strokeStyle = "rgba(255,255,255,.14)"; g.lineWidth = 1; g.beginPath();
+      P.forEach(function(pt, q){ var yy = G.y(0) ; q ? g.lineTo(pt.x, pt.y) : g.moveTo(pt.x, pt.y); }); g.stroke();
+    }
+    g.save(); g.globalCompositeOperation = "lighter"; g.lineJoin = "round"; g.lineCap = "round";
+    STRANDS.forEach(function(S, k){
+      strandPath(k);
+      g.shadowColor = "rgba(57,255,110,0.9)"; g.shadowBlur = 16;
+      g.strokeStyle = "rgba(40,230,95," + (0.18 * S.a * I * flick).toFixed(3) + ")"; g.lineWidth = 7; g.stroke();
+      g.shadowBlur = 6;
+      g.strokeStyle = "rgba(150,255,175," + (0.55 * S.a * I * flick).toFixed(3) + ")"; g.lineWidth = 2.2; g.stroke();
+      g.shadowBlur = 0;
+      g.strokeStyle = "rgba(236,255,240," + (0.85 * S.a * I * flick).toFixed(3) + ")"; g.lineWidth = 0.9; g.stroke();
+    });
+    // stray sparks when the signal is hot
+    if (wavesLive && lvOut > 0.55){
+      var nSp = Math.floor((lvOut - 0.5) * 6 * Math.random());
+      for (var sp = 0; sp < nSp; sp++){
+        var o = P[Math.floor(Math.random() * P.length)]; if (!o.e) continue;
+        var sx = o.x, sy = o.y; g.beginPath(); g.moveTo(sx, sy);
+        for (var k2 = 0; k2 < 4; k2++){ sx += (Math.random() - 0.5) * 14; sy += (Math.random() - 0.5) * 18; g.lineTo(sx, sy); }
+        g.shadowColor = "rgba(80,255,130,1)"; g.shadowBlur = 10;
+        g.strokeStyle = "rgba(210,255,222,0.7)"; g.lineWidth = 0.8; g.stroke();
+      }
+    }
+    // dots: glowing electrodes
+    pts.forEach(function(p, i){
+      var on = i === active || (i === focusPt && document.activeElement === cv), x = G.x(i), y = G.y(p);
+      if (i > 0 && i < 7 && !tubeOn[i - 1]){ g.shadowBlur = 0; g.strokeStyle = "rgba(150,215,170,.55)"; g.lineWidth = 1.2; g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.stroke(); return; }
+      g.globalAlpha = 0.3 + 0.7 * I;
+      var halo = g.createRadialGradient(x, y, 0, x, y, on ? 16 : 12);
+      halo.addColorStop(0, "rgba(205,255,220,0.9)"); halo.addColorStop(0.35, "rgba(57,240,110,0.45)"); halo.addColorStop(1, "rgba(40,220,90,0)");
+      g.shadowBlur = 0; g.fillStyle = halo; g.beginPath(); g.arc(x, y, on ? 16 : 12, 0, Math.PI * 2); g.fill();
+      g.fillStyle = "#f2fff5"; g.beginPath(); g.arc(x, y, on ? 4.5 : 3.2, 0, Math.PI * 2); g.fill();
+    });
+    g.restore();
+    var show = active >= 0 ? active : (document.activeElement === cv ? focusPt : -1);
+    if (show >= 0){
+      var t = ptDb(show), tx = Math.min(W - 30, Math.max(30, G.x(show))), ty = Math.max(14, G.y(pts[show]) - 14);
+      g.font = "600 11px 'IBM Plex Sans Condensed', sans-serif"; g.fillStyle = "#f2f2f2"; g.fillText(t, tx, ty);
+    }
+  }
+  window.addEventListener("resize", function(){ applyScale(UI_SCALE, false); });
+
+  /* spring tank: three coils between two transducers, shaken by the reverb signal */
+  var sc = $("springs"), revBuf = new Float32Array(2048), revLv = 0, springGlow = 0;
+  function drawSprings(live){
+    springGlow += ((live ? revLv : 0) - springGlow) * 0.08; // slow follower: glow eases in and out
+    var dpr = (window.devicePixelRatio || 1) * ZOOM, W = sc.clientWidth, H = sc.clientHeight;
+    if (!W || !H) return;
+    if (sc.width !== Math.round(W * dpr) || sc.height !== Math.round(H * dpr)){ sc.width = Math.round(W * dpr); sc.height = Math.round(H * dpr); }
+    var g = sc.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+    var x0 = 22, x1 = W - 22, rows = [H * 0.27, H * 0.5, H * 0.73], N = Math.round((x1 - x0) / 4), now = performance.now() / 1000;
+    // transducers
+    [[5, x0 - 3], [x1 + 3, W - 5]].forEach(function(e){
+      var gr = g.createLinearGradient(0, 8, 0, H - 8); gr.addColorStop(0, "#5c6064"); gr.addColorStop(0.5, "#a9adb0"); gr.addColorStop(1, "#4a4e52");
+      g.fillStyle = gr; g.fillRect(e[0], 8, e[1] - e[0], H - 16);
+    });
+    var glow = getComputedStyle(amp).getPropertyValue("--glow").trim() || "#ff9a4a";
+    if (live && springGlow > 0.02){
+      var hz = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.55);
+      hz.addColorStop(0, "rgba(57,255,110," + (0.16 * Math.min(1, springGlow * 1.4)).toFixed(3) + ")"); hz.addColorStop(1, "rgba(57,255,110,0)");
+      g.fillStyle = hz; g.fillRect(x0, 4, x1 - x0, H - 8);
+    }
+    rows.forEach(function(cy, si){
+      var coilR = 3.2;
+      g.beginPath();
+      for (var j = 0; j <= N * 6; j++){
+        var u = j / (N * 6), turn = u * N * 2 * Math.PI;
+        var disp = 0;
+        if (live && springGlow > 0.005){
+          // vibrating string modes, energy from the reverb level; each spring rings at its own rate
+          var e = Math.pow(springGlow, 1.2) * 7, base = 7 + si * 2.3;
+          disp = e * (0.6 * Math.sin(Math.PI * u) * Math.sin(now * base + si) +
+                      0.3 * Math.sin(2 * Math.PI * u) * Math.sin(now * base * 2.1 + si * 2) +
+                      0.18 * Math.sin(3 * Math.PI * u) * Math.sin(now * base * 3.3 + si * 3));
+        }
+        var x = x0 + u * (x1 - x0) + Math.cos(turn) * 1.6, y = cy + Math.sin(turn) * coilR + disp;
+        j ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.lineWidth = 1.1; g.strokeStyle = "#c3c7ca"; g.stroke();
+      // springs glow green with the reverb's intensity
+      var ga = live ? Math.min(1, springGlow * 1.4) : 0;
+      if (ga > 0.01){
+        g.save(); g.globalCompositeOperation = "lighter";
+        g.shadowColor = glow; g.shadowBlur = 4 + 14 * ga;
+        g.globalAlpha = 0.25 + 0.6 * ga; g.strokeStyle = glow; g.lineWidth = 1 + 1.4 * ga; g.stroke();
+        g.shadowBlur = 0; g.globalAlpha = 0.5 * ga; g.strokeStyle = "#d8ffe2"; g.lineWidth = 0.7; g.stroke();
+        g.restore();
+      }
+    });
+  }
+
+  /* tubes = gain stages: each sits under its curve dot and drags like it */
+  function syncTube(k){
+    var t = tubeEls[k], db = stageGainDb(k, pts[k + 1]);
+    t.setAttribute("aria-valuenow", db.toFixed(1));
+    t.setAttribute("aria-valuetext", (db >= 0 ? "+" : "") + db.toFixed(1) + " dB");
+    t.querySelector(".drv").textContent = tubeOn[k] ? (db >= 0 ? "+" : "") + db.toFixed(1) + " dB" : "off";
+    t.classList.toggle("off", !tubeOn[k]);
+    t.style.setProperty("--drive", pts[k + 1].toFixed(3));   // 0…1: glow grows with the drive setting
+    t.setAttribute("aria-label", "Tube " + (6 - k) + (tubeOn[k] ? ", on" : ", off") + ". Click or press Enter to switch; drag or use arrows for drive");
+    if (!running || !tubeOn[k]) plates[k].style.setProperty("--heat", tubeOn[k] ? "0.1" : "0");
+  }
+  function rect(el){ var q = el.getBoundingClientRect(), k = ZOOM; return { left:q.left / k, top:q.top / k, right:q.right / k, width:q.width / k, height:q.height / k }; }
+  function layoutTubes(){
+    var cr = rect(cv), G = geom();
+    if (!cr.width) return;
+    var ar = rect(amp), apad = parseFloat(getComputedStyle(amp).paddingLeft) || 0;
+    var scr = rect(document.querySelector(".screen"));
+    var scrL = scr.left - ar.left - apad;                       // curve box, relative to the panel content
+    var dotX = function(i){ return cr.left - ar.left - apad + G.x(i); };
+    var tw = Math.max(20, Math.min(38, (cr.width - 24) / 7 - 16));
+    // black box behind the tubes: exactly as wide as the curve area
+    var tb = $("tubes");
+    var th = tubeEls[0] ? tubeEls[0].offsetHeight : 96;
+    tb.style.height = Math.round(th + 16) + "px"; tb.style.marginBottom = "0";
+    tb.style.alignSelf = "flex-start"; tb.style.marginLeft = scrL + "px"; tb.style.width = scr.width + "px";
+    // tubes stay under their curve dots
+    tubeEls.forEach(function(t, k){ t.style.left = (dotX(k + 1) - scrL) + "px"; t.style.width = tw + "px"; });
+    // transformers behind the tubes: left end (VOL column), middle (between tubes 4 and 3), right end (GAIN column)
+    var edgeL = scrL, edgeR = scrL + scr.width, t6 = dotX(6) - tw / 2, t1 = dotX(1) + tw / 2;
+    var xs = document.querySelectorAll(".xfmr"), xPos = [(edgeL + t6) / 2 + 24, (dotX(3) + dotX(4)) / 2, (t1 + edgeR) / 2 - 24];   // side transformers tucked inwards, behind tubes 6 and 1
+    xs.forEach(function(x, i){ x.style.left = (xPos[i] - scrL) + "px"; });
+    // switches over their columns
+    var swRow = $("switches"), srr = rect(swRow);
+    // routing menus sit beside POWER, as wide as the curve area
+    var io = swRow.querySelector(".io"); if (io){ io.style.marginLeft = (scr.left - srr.left) + "px"; io.style.width = scr.width + "px"; } // same span as the curve box
+    // POWER sits above the IN meter
+    var inBox = rect(document.querySelector(".meterbox")), pw = null; // POWER now lives in the routing panel
+    if (pw) pw.style.left = (inBox.left + inBox.width / 2 - srr.left) + "px";
+    // MEGATRON: halfway between the curve box and the full panel
+    // MEGATRON spans from the IN meter's outer edge to the OUT meter's outer edge
+    var mIn = rect(document.querySelectorAll(".meter")[0]), mOut = rect(document.querySelectorAll(".meter")[1]);
+    // MEGATRON is exactly as wide as the reverb tank (and the curve/tube boxes)
+    var wm = document.querySelector(".wordmark"), inset = Math.max(0, scrL);
+    wm.style.alignSelf = "stretch"; wm.style.marginLeft = inset + "px"; wm.style.marginRight = inset + "px"; wm.style.width = "auto";
+    // spring tank spans the row of tubes (outer edge of tube 1 to tube 6, plus room for the transducers)
+    // spring tank: same width as the curve area and the tube box
+    var tank = document.querySelector(".tank");
+    tank.style.alignSelf = "flex-start"; tank.style.marginLeft = scrL + "px"; tank.style.width = scr.width + "px";
+    var tnr = $("tuner"); tnr.style.marginLeft = tnr.style.marginRight = "auto"; tnr.style.alignSelf = "center"; tnr.style.width = Math.min(scr.width, Math.max(200, Math.round((scr.width - 80) / 3))) + "px";   // same width it had under INPUT CHANNEL, centred in the panel
+    // decorative bolts: meter columns × (routing row, tube box, knob row)
+    var bolts = document.querySelectorAll(".bolt");
+    if (bolts.length === 6){
+      ar = rect(amp);
+      var xs = [22, ar.width - 22];
+      var ys = [46, ar.height / 2, ar.height - 46];
+      for (var bi = 0; bi < 6; bi++){ bolts[bi].style.left = xs[bi % 2] + "px"; bolts[bi].style.top = ys[Math.floor(bi / 2)] + "px"; }
+    }
+    if (typeof sc !== "undefined" && sc && !running) drawSprings(false);
+  }
+
+  tubeEls.forEach(function(t, k){
+    var y0 = 0, p0 = 0, on = false;
+    var moved = false;
+    t.addEventListener("pointerdown", function(e){ on = true; moved = false; y0 = e.clientY; p0 = pts[k + 1]; t.setPointerCapture(e.pointerId); t.classList.add("drag"); active = k + 1; t.focus(); drawCurve(); });
+    t.addEventListener("pointermove", function(e){ if (!on) return; if (!moved && Math.abs(e.clientY - y0) < 4) return; moved = true; setPt(k + 1, p0 + (y0 - e.clientY) / (e.shiftKey ? 600 : 160)); });
+    function end(e){ if (!on) return; on = false; t.classList.remove("drag"); active = -1; if (!moved && e && e.type === "pointerup") toggleTube(k); save(); drawCurve(); }
+    t.addEventListener("pointerup", end); t.addEventListener("pointercancel", end);
+    t.addEventListener("wheel", function(e){ e.preventDefault(); setPt(k + 1, pts[k + 1] + (e.deltaY < 0 ? 0.02 : -0.02)); save(); }, { passive:false });
+    t.addEventListener("keydown", function(e){
+      if (e.key === "Enter" || e.key === " "){ e.preventDefault(); toggleTube(k); return; }
+      var st = e.shiftKey ? 0.01 : 0.05;
+      if (e.key === "ArrowUp" || e.key === "ArrowRight") setPt(k + 1, pts[k + 1] + st);
+      else if (e.key === "ArrowDown" || e.key === "ArrowLeft") setPt(k + 1, pts[k + 1] - st);
+      else return;
+      e.preventDefault(); save();
+    });
+  });
+
+  function setPt(i, p){
+    if (i === 0 || i === 7){ setVal(i === 0 ? "gain" : "vol", p * 10); readout.textContent = ptText(i); return; }
+    pts[i] = Math.round(Math.max(0, Math.min(1, p)) * 200) / 200;
+    offs[i - 1] = pts[i] - profile(i - 1, vals.gain);   // hand tweak rides on top of GAIN
+    readout.textContent = ptText(i);
+    syncTube(i - 1);
+    applyParams(); drawCurve();
+  }
+  function autoPt(i){ if (i === 0) setVal("gain", 5); else if (i === 7) setVal("vol", 5); else { offs[i - 1] = 0; setPt(i, profile(i - 1)); } }
+  function nearest(e){
+    var r = rect(cv), x = e.clientX / ZOOM - r.left, G = geom(), best = 0, bd = 1e9;
+    for (var i = 0; i < 8; i++){ var d = Math.abs(G.x(i) - x); if (d < bd){ bd = d; best = i; } }
+    return best;
+  }
+  // press + move = drag the dot; double-click resets
+  var downY = 0, moved = false;
+  cv.addEventListener("pointerdown", function(e){
+    active = focusPt = nearest(e); cv.setPointerCapture(e.pointerId); downY = e.clientY; moved = false;
+  });
+  cv.addEventListener("pointermove", function(e){
+    if (active < 0) return;
+    if (!moved && Math.abs(e.clientY - downY) < 3) return;
+    moved = true; setPt(active, geom().p(e.clientY / ZOOM - rect(cv).top));
+  });
+  function endDrag(e){
+    if (active < 0) return;
+    var hit = active; active = -1; save(); drawCurve();
+    // a click (no drag) on a tube dot opens a box to type its gain; wait a moment so a double-click can still reset
+    if (!moved && e && e.type === "pointerup" && hit >= 1 && hit <= 6){ clearTimeout(editTimer); editTimer = setTimeout(function(){ openDotEdit(hit); }, 260); }
+  }
+  cv.addEventListener("pointerup", endDrag);
+  cv.addEventListener("pointercancel", endDrag);
+  cv.addEventListener("dblclick", function(e){ clearTimeout(editTimer); closeDotEdit(false); autoPt(nearest(e)); save(); });
+
+  /* type a tube's stage gain: 0 … 48 dB */
+  var editTimer = 0, dotEdit = null, fitCtx = null;
+  function setDotDb(i, db){
+    db = Math.max(0, Math.min(48, Math.round(db * 10) / 10));
+    pts[i] = db / 48;
+    offs[i - 1] = pts[i] - profile(i - 1, vals.gain);
+    readout.textContent = ptText(i);
+    syncTube(i - 1); applyParams(); drawCurve(); save();
+  }
+  function closeDotEdit(commit){
+    if (!dotEdit) return;
+    var ed = dotEdit; dotEdit = null;
+    if (commit){
+      var v = parseFloat(String(ed.box.value).replace(",", ".").replace(/[^0-9.+\-]/g, ""));
+      if (isFinite(v)) setDotDb(ed.i, v);
+    }
+    ed.box.remove();
+  }
+  function openDotEdit(i){
+    closeDotEdit(false);
+    var host = cv.parentElement, G = geom();
+    if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    var box = document.createElement("input");
+    box.type = "text"; box.inputMode = "decimal"; box.className = "dotEdit";
+    box.setAttribute("aria-label", PT_NAMES[i] + " stage gain in dB, 0 to 48");
+    box.value = (pts[i] * 48).toFixed(1);
+    var x = cv.offsetLeft + G.x(i), y = cv.offsetTop + G.y(pts[i]);
+    box.style.left = Math.max(cv.offsetLeft + 34, Math.min(cv.offsetLeft + G.W - 34, x)) + "px";
+    box.style.top = (y < 40 ? y + 24 : y - 24) + "px";
+    host.appendChild(box);
+    // the box hugs the typed text
+    var fit = function(){ var m = fitCtx || (fitCtx = document.createElement("canvas").getContext("2d")); m.font = getComputedStyle(box).font; box.style.width = Math.ceil(m.measureText(box.value || "0").width + 2) + "px"; };
+    fit(); box.addEventListener("input", fit);
+    dotEdit = { i:i, box:box };
+    box.addEventListener("keydown", function(e){
+      if (e.key === "Enter"){ e.preventDefault(); closeDotEdit(true); cv.focus(); }
+      else if (e.key === "Escape"){ e.preventDefault(); closeDotEdit(false); cv.focus(); }
+      e.stopPropagation();
+    });
+    box.addEventListener("blur", function(){ closeDotEdit(true); });
+    box.focus(); box.select();
+  }
+
+
+  cv.addEventListener("focus", function(){ readout.textContent = ptText(focusPt); drawCurve(); });
+  cv.addEventListener("blur", drawCurve);
+  cv.addEventListener("keydown", function(e){
+    var step = e.shiftKey ? 0.01 : 0.05;
+    if (e.key === "ArrowLeft"){ focusPt = Math.max(0, focusPt - 1); readout.textContent = ptText(focusPt); drawCurve(); }
+    else if (e.key === "ArrowRight"){ focusPt = Math.min(7, focusPt + 1); readout.textContent = ptText(focusPt); drawCurve(); }
+    else if (e.key === "ArrowUp"){ setPt(focusPt, pts[focusPt] + step); save(); }
+    else if (e.key === "ArrowDown"){ setPt(focusPt, pts[focusPt] - step); save(); }
+    else return;
+    e.preventDefault();
+  });
+
+  /* ---------- plugin size (bottom-right grip) ---------- */
+  function applyScale(k, persist){
+    UI_SCALE = Math.max(0.6, Math.min(1.6, Math.round(k * 100) / 100));
+    var avail = (document.documentElement.clientWidth || window.innerWidth) - (window.innerWidth <= 640 ? 16 : 32);
+    ZOOM = Math.min(UI_SCALE, avail / 900);   // same proportions as on a computer, just smaller
+    amp.style.zoom = ZOOM;
+    $("gripPct").textContent = Math.round(UI_SCALE * 100) + "%";
+    $("grip").setAttribute("aria-valuenow", Math.round(UI_SCALE * 100));
+    if (persist){ try { localStorage.setItem("megatron-scale", UI_SCALE); } catch(e){} }
+    layoutTubes(); drawCurve(); drawSprings(running);
+  }
+  (function(){
+    var g = $("grip"), x0 = 0, y0 = 0, k0 = 1, w0 = 1, on = false;
+    g.addEventListener("pointerdown", function(e){ on = true; x0 = e.clientX; y0 = e.clientY; k0 = ZOOM; w0 = amp.getBoundingClientRect().width; g.setPointerCapture(e.pointerId); g.classList.add("drag"); e.preventDefault(); });
+    g.addEventListener("pointermove", function(e){ if (!on) return; var d = Math.max(e.clientX - x0, (e.clientY - y0) * 1.2); applyScale(k0 * (w0 + d) / w0, false); });
+    function end(){ if (!on) return; on = false; g.classList.remove("drag"); applyScale(UI_SCALE, true); }
+    g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end);
+    g.addEventListener("dblclick", function(){ applyScale(1, true); });
+    g.addEventListener("keydown", function(e){
+      if (e.key === "ArrowUp" || e.key === "ArrowRight") applyScale(UI_SCALE + 0.05, true);
+      else if (e.key === "ArrowDown" || e.key === "ArrowLeft") applyScale(UI_SCALE - 0.05, true);
+      else return; e.preventDefault();
+    });
+  })();
+
+  /* ---------- init ---------- */
+  setTimeout(function(){ applyScale(UI_SCALE, false); drawSprings(false); }, 0);
+  if (!offs){ offs = [0, 0, 0, 0, 0, 0]; autoStages(); } // first load: natural staging (a straight line at GAIN 5 / VOLUME 5)
+  tubeEls.forEach(function(t, k){ syncTube(k); });
+  layoutTubes();
+  Object.keys(vals).forEach(function(k){ setVal(k, vals[k]); });
+  setSkin("midnight");
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawCurve);
+})();
+</script>
+</body>
+</html>
