@@ -41,7 +41,7 @@ button,select{font:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid #39ff6e;outline-offset:2px}
 .io select{accent-color:#39ff6e}
-.io select:focus,.io select:focus-visible{outline:2px solid #39ff6e;outline-offset:1px;border-color:#39ff6e}
+.io select:focus,.io select:focus-visible{outline:none;border-color:rgba(0,0,0,.35)}   /* no highlight ring on the device boxes */
 .io select option:checked{background:#1d6b33;color:#fff}
 .dial:focus,.dial:focus-visible{outline:none}
 .tube:focus{outline:none}
@@ -218,6 +218,9 @@ button{cursor:pointer}
 #pwrLbl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap} /* hidden text, still read out as the switch name */
 .val{position:absolute;left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;padding:1px 6px;border-radius:4px;background:transparent;color:#fff;opacity:0;transition:opacity .15s;pointer-events:none;z-index:2}
 .knob.turning .val{opacity:1}
+.dotEdit{position:absolute;transform:translate(-50%,-50%);box-sizing:content-box;width:4ch;min-width:1ch;padding:3px 6px;border-radius:5px;border:2.5px solid #39ff6e;background:#0b0c0c;color:#fff;
+  font:600 12px 'IBM Plex Sans Condensed',sans-serif;text-align:center;font-variant-numeric:tabular-nums;outline:none;z-index:5;box-shadow:0 0 12px rgba(57,255,110,.55);
+  -webkit-user-select:text;user-select:text}
 .hint{text-align:center;font-size:12px;opacity:.85;padding-bottom:4px}
 
 @media (max-width:640px){body{padding:10px 8px}}
@@ -1366,11 +1369,56 @@ button{cursor:pointer}
   });
   function endDrag(e){
     if (active < 0) return;
-    active = -1; save(); drawCurve();
+    var hit = active; active = -1; save(); drawCurve();
+    // a click (no drag) on a tube dot opens a box to type its gain; wait a moment so a double-click can still reset
+    if (!moved && e && e.type === "pointerup" && hit >= 1 && hit <= 6){ clearTimeout(editTimer); editTimer = setTimeout(function(){ openDotEdit(hit); }, 260); }
   }
   cv.addEventListener("pointerup", endDrag);
   cv.addEventListener("pointercancel", endDrag);
-  cv.addEventListener("dblclick", function(e){ autoPt(nearest(e)); save(); });
+  cv.addEventListener("dblclick", function(e){ clearTimeout(editTimer); closeDotEdit(false); autoPt(nearest(e)); save(); });
+
+  /* type a tube's stage gain: 0 … 48 dB */
+  var editTimer = 0, dotEdit = null, fitCtx = null;
+  function setDotDb(i, db){
+    db = Math.max(0, Math.min(48, Math.round(db * 10) / 10));
+    pts[i] = db / 48;
+    offs[i - 1] = pts[i] - profile(i - 1, vals.gain);
+    readout.textContent = ptText(i);
+    syncTube(i - 1); applyParams(); drawCurve(); save();
+  }
+  function closeDotEdit(commit){
+    if (!dotEdit) return;
+    var ed = dotEdit; dotEdit = null;
+    if (commit){
+      var v = parseFloat(String(ed.box.value).replace(",", ".").replace(/[^0-9.+\-]/g, ""));
+      if (isFinite(v)) setDotDb(ed.i, v);
+    }
+    ed.box.remove();
+  }
+  function openDotEdit(i){
+    closeDotEdit(false);
+    var host = cv.parentElement, G = geom();
+    if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    var box = document.createElement("input");
+    box.type = "text"; box.inputMode = "decimal"; box.className = "dotEdit";
+    box.setAttribute("aria-label", PT_NAMES[i] + " stage gain in dB, 0 to 48");
+    box.value = (pts[i] * 48).toFixed(1);
+    var x = cv.offsetLeft + G.x(i), y = cv.offsetTop + G.y(pts[i]);
+    box.style.left = Math.max(cv.offsetLeft + 34, Math.min(cv.offsetLeft + G.W - 34, x)) + "px";
+    box.style.top = (y < 40 ? y + 24 : y - 24) + "px";
+    host.appendChild(box);
+    // the box hugs the typed text
+    var fit = function(){ var m = fitCtx || (fitCtx = document.createElement("canvas").getContext("2d")); m.font = getComputedStyle(box).font; box.style.width = Math.ceil(m.measureText(box.value || "0").width + 2) + "px"; };
+    fit(); box.addEventListener("input", fit);
+    dotEdit = { i:i, box:box };
+    box.addEventListener("keydown", function(e){
+      if (e.key === "Enter"){ e.preventDefault(); closeDotEdit(true); cv.focus(); }
+      else if (e.key === "Escape"){ e.preventDefault(); closeDotEdit(false); cv.focus(); }
+      e.stopPropagation();
+    });
+    box.addEventListener("blur", function(){ closeDotEdit(true); });
+    box.focus(); box.select();
+  }
 
 
   cv.addEventListener("focus", function(){ readout.textContent = ptText(focusPt); drawCurve(); });
